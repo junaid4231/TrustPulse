@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrustPulse Widget Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        background: white;
+        border-radius: 20px;
+        padding: 60px 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 3rem;
+        color: #1a202c;
+        margin-bottom: 20px;
+        font-weight: 800;
+      }
+
+      p {
+        font-size: 1.25rem;
+        color: #4a5568;
+        margin-bottom: 40px;
+        line-height: 1.6;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 30px;
+        margin-top: 50px;
+      }
+
+      .feature {
+        padding: 30px;
+        background: #f7fafc;
+        border-radius: 12px;
+        transition: transform 0.3s;
+      }
+
+      .feature:hover {
+        transform: translateY(-5px);
+      }
+
+      .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+      }
+
+      .feature h3 {
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 1.25rem;
+      }
+
+      .feature p {
+        font-size: 0.95rem;
+        color: #718096;
+        margin: 0;
+      }
+
+      .cta {
+        margin-top: 40px;
+        padding: 18px 40px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .cta:hover {
+        background: #5a67d8;
+      }
+
+      .instructions {
+        margin-top: 60px;
+        padding: 30px;
+        background: #edf2f7;
+        border-radius: 12px;
+        text-align: left;
+      }
+
+      .instructions h2 {
+        color: #2d3748;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+      }
+
+      .instructions ol {
+        margin-left: 20px;
+        color: #4a5568;
+      }
+
+      .instructions li {
+        margin-bottom: 12px;
+        line-height: 1.6;
+      }
+
+      .instructions code {
+        background: #2d3748;
+        color: #68d391;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+      }
+
+      .widget-id-display {
+        margin-top: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        border: 2px dashed #cbd5e0;
+      }
+
+      .widget-id-display strong {
+        color: #667eea;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎉 Welcome to Our SaaS!</h1>
+      <p>
+        This is a demo page showing how the TrustPulse Lite widget works. Watch
+        the bottom right corner for social proof notifications!
+      </p>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">⚡</div>
+          <h3>Lightning Fast</h3>
+          <p>Instant notifications that don't slow down your site</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🎨</div>
+          <h3>Customizable</h3>
+          <p>Match your brand colors and positioning</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📊</div>
+          <h3>Analytics</h3>
+          <p>Track impressions and clicks in real-time</p>
+        </div>
+      </div>
+
+      <button class="cta">Get Started Free</button>
+
+      <div class="instructions">
+        <h2>📝 How to Test This Widget</h2>
+        <ol>
+          <li>
+            Make sure your Next.js dev server is running (<code
+              >npm run dev</code
+            >)
+          </li>
+          <li>
+            Create a widget in your dashboard at
+            <code>http://localhost:3000/dashboard</code>
+          </li>
+          <li>Copy the widget ID from the dashboard</li>
+          <li>
+            Replace <code>YOUR_WIDGET_ID_HERE</code> in the script tag at the
+            bottom of this HTML file
+          </li>
+          <li>Open this HTML file in your browser and watch the magic! ✨</li>
+        </ol>
+
+        <div class="widget-id-display">
+          <strong>⚠️ Important:</strong> Look at the script tag at the bottom of
+          this page's HTML. Replace <code>YOUR_WIDGET_ID_HERE</code> with your
+          actual widget ID from the dashboard!
+        </div>
+      </div>
+    </div>
+
+    <!-- 
+    IMPORTANT: Replace YOUR_WIDGET_ID_HERE with your actual widget ID!
+    You can find this in your dashboard after creating a widget.
+  -->
+    <script>
+      // Load widget script dynamically
+      (function () {
+        const script = document.createElement("script");
+        script.src = "widget.js";
+        script.setAttribute(
+          "data-widget",
+          "ff9fbe6d-0712-4f02-a341-74a664a04b06"
+        );
+        document.body.appendChild(script);
+      })();
+    </script>
+  </body>
+</html>
