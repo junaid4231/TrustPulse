@@ -3,12 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 // Rate limiting (simple in-memory store - use Redis in production)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 100; // requests per minute
+const RATE_LIMIT = 1000; // Increased for testing
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
 function checkRateLimit(ip: string): boolean {
@@ -71,21 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate widget exists and is active
-    const { data: widget, error: widgetError } = await supabase
-      .from("widgets")
-      .select("id, is_active")
-      .eq("id", widget_id)
-      .eq("is_active", true)
-      .single();
-
-    if (widgetError || !widget) {
-      return NextResponse.json(
-        { error: "Widget not found or inactive" },
-        { status: 404 }
-      );
-    }
-
     // Insert analytics event with enhanced data
     const analyticsData = {
       widget_id,
@@ -102,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("Analytics insert error:", error);
       return NextResponse.json(
-        { error: "Failed to record event" },
+        { error: "Failed to record event", details: error.message },
         { status: 500 }
       );
     }

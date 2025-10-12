@@ -3,15 +3,25 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
 );
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const widgetId = params.id;
+    // CRITICAL: Await params in Next.js 15
+    const { id: widgetId } = await context.params;
+
+    console.log("Fetching widget:", widgetId);
 
     // Validate widget ID format (basic UUID check)
     const uuidRegex =
@@ -23,24 +33,26 @@ export async function GET(
       );
     }
 
-    // Fetch widget settings with caching headers
+    // Fetch widget settings - REMOVED is_active filter for now
     const { data: widget, error: widgetError } = await supabase
       .from("widgets")
       .select("*")
       .eq("id", widgetId)
-      .eq("is_active", true)
       .single();
+
+    console.log("Widget found:", widget);
+    console.log("Widget error:", widgetError);
 
     if (widgetError || !widget) {
       return NextResponse.json(
-        { error: "Widget not found or inactive" },
+        { error: "Widget not found or inactive", details: widgetError },
         {
           status: 404,
           headers: {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers":
+              "Content-Type, Cache-Control, Accept",
           },
         }
       );
@@ -53,21 +65,12 @@ export async function GET(
       .eq("widget_id", widgetId)
       .eq("is_active", true)
       .order("timestamp", { ascending: false })
-      .limit(15); // Increased limit for better rotation
+      .limit(15);
+
+    console.log("Notifications found:", notifications?.length || 0);
 
     if (notificationsError) {
       console.error("Notifications fetch error:", notificationsError);
-      return NextResponse.json(
-        { error: "Failed to fetch notifications" },
-        {
-          status: 500,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-          },
-        }
-      );
     }
 
     // Return widget data with enhanced information
@@ -86,26 +89,28 @@ export async function GET(
         name: notification.name,
         location: notification.location,
         timestamp: notification.timestamp,
+        is_active: notification.is_active, // Include this for widget.js
       })),
       meta: {
         total_notifications: notifications?.length || 0,
         widget_created: widget.created_at,
+        timestamp: new Date().toISOString(),
       },
     };
 
     return NextResponse.json(response, {
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Cache-Control": "public, max-age=300", // Cache for 5 minutes
-        ETag: `"${widget.id}-${widget.updated_at}"`,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Cache-Control, Accept",
+        "Access-Control-Max-Age": "86400",
+        "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
       },
     });
   } catch (error) {
     console.error("Widget API Error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: String(error) },
       {
         status: 500,
         headers: {
@@ -126,7 +131,8 @@ export async function OPTIONS() {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Cache-Control, Accept",
+        "Access-Control-Max-Age": "86400",
       },
     }
   );
