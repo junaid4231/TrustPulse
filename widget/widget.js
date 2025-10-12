@@ -1,97 +1,118 @@
 (function () {
   "use strict";
 
+  console.log("TrustPulse: Widget script loaded");
+
   // Get widget ID from script tag
   const script = document.currentScript;
   const widgetId = script.getAttribute("data-widget");
+
+  console.log("TrustPulse: Widget ID:", widgetId);
 
   if (!widgetId) {
     console.error("TrustPulse: No widget ID provided");
     return;
   }
 
-  // API endpoint - automatically detect environment
-  const API_URL =
-    window.location.hostname === "localhost"
-      ? "http://localhost:3000/api"
-      : `${window.location.protocol}//${window.location.host}/api`;
+  // API endpoint - HARDCODED for development
+  // In production, this should be replaced with your deployed API URL
+  const API_URL = "http://localhost:3000/api";
+
+  console.log("TrustPulse: API URL:", API_URL);
+  console.log("TrustPulse: Will fetch from:", `${API_URL}/widget/${widgetId}`);
 
   // Widget state
   let notifications = [];
   let currentIndex = 0;
   let widgetSettings = {};
   let notificationElement = null;
-  let isVisible = false;
   let retryCount = 0;
   const MAX_RETRIES = 3;
 
   // Fetch widget data with retry logic
   async function fetchWidgetData() {
+    console.log("TrustPulse: Starting fetch...");
+
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(`${API_URL}/widget/${widgetId}`, {
+      const fetchUrl = `${API_URL}/widget/${widgetId}`;
+      console.log("TrustPulse: Fetching from:", fetchUrl);
+
+      const response = await fetch(fetchUrl, {
         signal: controller.signal,
         headers: {
           Accept: "application/json",
-          "Cache-Control": "no-cache",
         },
       });
 
       clearTimeout(timeoutId);
 
+      console.log("TrustPulse: Response received, status:", response.status);
+
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("TrustPulse: API Error:", errorData);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log("TrustPulse: Data received:", data);
 
       if (!data.widget) {
         throw new Error("Invalid widget data received");
       }
 
       widgetSettings = data.widget;
-      notifications = data.notifications.filter((n) => n.is_active);
+      notifications = data.notifications.filter((n) => n.is_active !== false);
 
-      // Reset retry count on success
+      console.log("TrustPulse: Widget settings:", widgetSettings);
+      console.log("TrustPulse: Notifications loaded:", notifications.length);
+
       retryCount = 0;
 
       if (notifications.length > 0) {
         createWidget();
         startNotificationCycle();
+      } else {
+        console.warn("TrustPulse: No active notifications found");
       }
     } catch (error) {
       console.error("TrustPulse Error:", error.message);
+      console.error("TrustPulse Error stack:", error.stack);
 
-      // Retry logic for network errors
       if (
         retryCount < MAX_RETRIES &&
         (error.name === "AbortError" ||
           error.message.includes("Failed to fetch"))
       ) {
         retryCount++;
-        console.log(`TrustPulse: Retrying... (${retryCount}/${MAX_RETRIES})`);
-        setTimeout(fetchWidgetData, Math.pow(2, retryCount) * 1000); // Exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(
+          `TrustPulse: Retrying in ${delay}ms... (${retryCount}/${MAX_RETRIES})`
+        );
+        setTimeout(fetchWidgetData, delay);
       }
     }
   }
 
-  // Create widget container
   function createWidget() {
-    // Check if widget already exists
-    if (document.getElementById("trustpulse-widget")) return;
+    console.log("TrustPulse: Creating widget container");
 
-    // Create container
+    if (document.getElementById("trustpulse-widget")) {
+      console.log("TrustPulse: Widget already exists");
+      return;
+    }
+
     notificationElement = document.createElement("div");
     notificationElement.id = "trustpulse-widget";
     notificationElement.style.cssText = getWidgetStyles();
-
-    // Add to page
     document.body.appendChild(notificationElement);
+
+    console.log("TrustPulse: Widget container created and added to body");
   }
 
-  // Get widget position styles with responsive design
   function getWidgetStyles() {
     const position = widgetSettings.position || "bottom-right";
     const baseStyles = `
@@ -116,45 +137,58 @@
     return baseStyles + (positions[position] || positions["bottom-right"]);
   }
 
-  // Start the notification cycle
   function startNotificationCycle() {
-    if (!notifications.length) return;
+    console.log("TrustPulse: Starting notification cycle");
 
-    // Wait for page to be fully loaded before showing notifications
+    if (!notifications.length) {
+      console.warn("TrustPulse: No notifications to show");
+      return;
+    }
+
     if (document.readyState !== "complete") {
+      console.log("TrustPulse: Waiting for page to load...");
       window.addEventListener("load", () => {
+        console.log("TrustPulse: Page loaded, starting in 2s");
         setTimeout(showNextNotification, 2000);
       });
     } else {
+      console.log("TrustPulse: Page already loaded, starting in 2s");
       setTimeout(showNextNotification, 2000);
     }
   }
 
-  // Show next notification
   function showNextNotification() {
-    if (!notifications.length || !notificationElement) return;
+    if (!notifications.length || !notificationElement) {
+      console.warn("TrustPulse: Cannot show notification");
+      return;
+    }
 
     const notification = notifications[currentIndex];
+    console.log(
+      `TrustPulse: Showing notification ${currentIndex + 1}/${
+        notifications.length
+      }:`,
+      notification.name
+    );
+
     displayNotification(notification);
 
-    // Move to next notification
     currentIndex = (currentIndex + 1) % notifications.length;
 
-    // Show next after delay
     setTimeout(() => {
       hideNotification(() => {
-        // Random delay between 3-8 seconds for more natural feel
         const delay = 3000 + Math.random() * 5000;
+        console.log(
+          `TrustPulse: Next notification in ${Math.round(delay / 1000)}s`
+        );
         setTimeout(showNextNotification, delay);
       });
-    }, 5000); // Show each notification for 5 seconds
+    }, 5000);
   }
 
-  // Display notification with enhanced design
   function displayNotification(notification) {
     const primaryColor = widgetSettings.primary_color || "#3B82F6";
 
-    // Get initials for avatar with fallback
     const initials = notification.name
       ? notification.name
           .split(" ")
@@ -164,7 +198,6 @@
           .slice(0, 2)
       : "👤";
 
-    // Generate gradient colors based on primary color
     const gradientColors = generateGradient(primaryColor);
 
     notificationElement.innerHTML = `
@@ -180,7 +213,6 @@
           backdrop-filter: blur(10px);
         " onclick="window.trustpulseClick('${notification.id}')">
           
-          <!-- Decorative elements -->
           <div style="
             position: absolute;
             top: 0;
@@ -257,28 +289,24 @@
         </div>
       `;
 
-    // Enhanced animation
     notificationElement.style.opacity = "0";
     notificationElement.style.transform = "translateY(30px) scale(0.95)";
 
     setTimeout(() => {
       notificationElement.style.opacity = "1";
       notificationElement.style.transform = "translateY(0) scale(1)";
+      console.log("TrustPulse: Notification displayed and animated");
     }, 50);
 
-    // Track impression
     trackEvent("impression", notification.id);
   }
 
-  // Generate gradient colors from primary color
   function generateGradient(primaryColor) {
-    // Convert hex to RGB
     const hex = primaryColor.replace("#", "");
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
 
-    // Generate lighter and darker versions
     const light = `rgb(${Math.min(255, r + 30)}, ${Math.min(
       255,
       g + 30
@@ -291,18 +319,16 @@
     return { light, dark };
   }
 
-  // Hide notification with enhanced animation
   function hideNotification(callback) {
     notificationElement.style.opacity = "0";
     notificationElement.style.transform = "translateY(-20px) scale(0.95)";
     setTimeout(callback, 500);
   }
 
-  // Get relative time
   function getTimeAgo(timestamp) {
     const now = new Date();
     const time = new Date(timestamp);
-    const diff = Math.floor((now - time) / 1000); // seconds
+    const diff = Math.floor((now - time) / 1000);
 
     if (diff < 60) return "just now";
     if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
@@ -310,9 +336,9 @@
     return `${Math.floor(diff / 86400)} days ago`;
   }
 
-  // Track events (impressions and clicks) with improved error handling
   function trackEvent(eventType, notificationId) {
-    // Use sendBeacon for better reliability on page unload
+    console.log(`TrustPulse: Tracking ${eventType}`);
+
     const data = JSON.stringify({
       widget_id: widgetId,
       event_type: eventType,
@@ -322,17 +348,18 @@
       user_agent: navigator.userAgent,
     });
 
-    // Try sendBeacon first (better for page unload)
     if (navigator.sendBeacon) {
       try {
-        navigator.sendBeacon(`${API_URL}/analytics`, data);
-        return;
+        const sent = navigator.sendBeacon(`${API_URL}/analytics`, data);
+        if (sent) {
+          console.log("TrustPulse: Analytics sent via sendBeacon");
+          return;
+        }
       } catch (e) {
-        // Fallback to fetch if sendBeacon fails
+        console.warn("TrustPulse: sendBeacon failed:", e);
       }
     }
 
-    // Fallback to fetch with timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -344,27 +371,30 @@
       },
       body: data,
       signal: controller.signal,
-      keepalive: true, // Helps with page unload scenarios
+      keepalive: true,
     })
+      .then(() => console.log("TrustPulse: Analytics sent via fetch"))
       .catch((err) => {
         if (err.name !== "AbortError") {
-          console.warn("TrustPulse analytics error:", err.message);
+          console.warn("TrustPulse: Analytics error:", err.message);
         }
       })
-      .finally(() => {
-        clearTimeout(timeoutId);
-      });
+      .finally(() => clearTimeout(timeoutId));
   }
 
-  // Handle clicks
   window.trustpulseClick = function (notificationId) {
+    console.log("TrustPulse: Notification clicked");
     trackEvent("click", notificationId);
   };
 
-  // Initialize
+  console.log("TrustPulse: Initializing...");
+  console.log("TrustPulse: Page ready state:", document.readyState);
+
   if (document.readyState === "loading") {
+    console.log("TrustPulse: Waiting for DOMContentLoaded");
     document.addEventListener("DOMContentLoaded", fetchWidgetData);
   } else {
+    console.log("TrustPulse: Starting immediately");
     fetchWidgetData();
   }
 })();
