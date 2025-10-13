@@ -13,6 +13,8 @@ import {
   CreditCard,
   AlertCircle,
   CheckCircle,
+  Sparkles,
+  Gift,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -412,9 +414,9 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-gray-900">Marketing Emails</h3>
+                <h3 className="font-medium text-gray-900">Product Updates</h3>
                 <p className="text-sm text-gray-600">
-                  Receive product updates, tips, and promotional content
+                  Beta updates, tips, and new feature announcements
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -485,7 +487,7 @@ export default function SettingsPage() {
                 Widget Script
               </label>
               <div className="bg-gray-50 p-4 rounded-lg relative">
-                <code className="text-sm text-gray-700 block">
+                <code className="text-sm text-gray-700 block overflow-x-auto">
                   {`<script src="${
                     typeof window !== "undefined"
                       ? window.location.origin
@@ -518,28 +520,37 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Account Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {/* Beta Program Status */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-sm border-2 border-blue-200 p-6">
           <div className="flex items-center gap-3 mb-6">
-            <CreditCard className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Account Information
-            </h2>
+            <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Beta Program Status
+              </h2>
+              <p className="text-sm text-gray-600">
+                You're part of something special! 🎉
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Account Type
               </label>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-900 font-medium">Free Plan</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-bold">
+                  Beta Tester
+                </span>
                 <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                  Active
+                  All Features Unlocked
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Up to 3 widgets, 1,000 notifications/month
+              <p className="text-xs text-gray-600 mt-2">
+                🎁 100% free during beta period
               </p>
             </div>
 
@@ -547,18 +558,93 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Member Since
               </label>
-              <p className="text-gray-900">
+              <p className="text-gray-900 font-medium">
                 {user?.created_at
                   ? new Date(user.created_at).toLocaleDateString()
                   : "N/A"}
               </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Early adopter #{user?.id?.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 border border-blue-200 mb-4">
+            <div className="flex items-start gap-3 mb-4">
+              <Gift className="w-6 h-6 text-purple-600 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Your Beta Benefits
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>Unlimited widgets (normally limited to 3)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>Unlimited notifications (normally 5,000/month)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>No branding/watermarks (normally $19/month)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>Priority email support</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>Early access to all new features</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span>50% lifetime discount when we launch</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600 mb-3">
+                💬 <strong>Help us improve!</strong> Your feedback is
+                invaluable. Share your thoughts:
+              </p>
+              <a
+                href="mailto:feedback@trustpulse-lite.com?subject=Beta Feedback"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium"
+              >
+                Send Feedback
+              </a>
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-100 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> You'll receive an email notification before
+              beta ends and paid plans launch. Your loyalty discount will be
+              automatically applied! 💙
+            </p>
+          </div>
+        </div>
+
+        {/* Account Information */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <CreditCard className="w-6 h-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">
+              Account Details
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 User ID
               </label>
-              <p className="text-gray-900 font-mono text-sm">{user?.id}</p>
+              <p className="text-gray-900 font-mono text-xs bg-gray-50 p-3 rounded break-all">
+                {user?.id}
+              </p>
             </div>
 
             <div>
@@ -567,39 +653,35 @@ export default function SettingsPage() {
               </label>
               <p className="text-gray-900">
                 {user?.last_sign_in_at
-                  ? new Date(user.last_sign_in_at).toLocaleDateString()
+                  ? new Date(user.last_sign_in_at).toLocaleString()
                   : "N/A"}
               </p>
             </div>
-          </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="font-medium text-gray-900 mb-4">Upgrade Options</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900">Pro Plan</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  Unlimited widgets, 10,000 notifications/month
-                </p>
-                <p className="text-lg font-bold text-blue-600 mt-2">
-                  $19/month
-                </p>
-                <button className="w-full mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Upgrade to Pro
-                </button>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900">Enterprise</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  Custom limits, priority support, white-label
-                </p>
-                <p className="text-lg font-bold text-blue-600 mt-2">
-                  Contact Sales
-                </p>
-                <button className="w-full mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                  Contact Sales
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Verified
+              </label>
+              <p className="text-gray-900">
+                {user?.email_confirmed_at ? (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="w-4 h-4" /> Verified
+                  </span>
+                ) : (
+                  <span className="text-orange-600">Pending verification</span>
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Account Status
+              </label>
+              <p className="text-gray-900">
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  Active
+                </span>
+              </p>
             </div>
           </div>
         </div>

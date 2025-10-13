@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Globe,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 export default function Home() {
@@ -19,8 +20,8 @@ export default function Home() {
           <Link href="#features" className="text-gray-600 hover:text-blue-600">
             Features
           </Link>
-          <Link href="#pricing" className="text-gray-600 hover:text-blue-600">
-            Pricing
+          <Link href="#beta" className="text-gray-600 hover:text-blue-600">
+            Beta Program
           </Link>
           <Link href="#faq" className="text-gray-600 hover:text-blue-600">
             FAQ
@@ -34,7 +35,7 @@ export default function Home() {
             href="/signup"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Get Started
+            Join Beta
           </Link>
         </div>
       </header>
@@ -42,8 +43,9 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto">
-          <div className="inline-block mb-4 px-4 py-2 bg-blue-100 text-blue-600 rounded-full text-sm font-medium">
-            🚀 Boost Your Conversions by 30%
+          <div className="inline-block mb-4 px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600 rounded-full text-sm font-medium">
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Now in Public Beta - Free Access for Early Adopters
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
             Show Social Proof That
@@ -57,16 +59,17 @@ export default function Home() {
           <div className="flex gap-4 justify-center flex-wrap">
             <Link
               href="/signup"
-              className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-lg font-medium"
+              className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-lg font-medium shadow-lg"
             >
-              Start Free Trial <ArrowRight className="w-5 h-5" />
+              Join Beta Program <ArrowRight className="w-5 h-5" />
             </Link>
             <button className="px-8 py-4 border-2 border-gray-300 rounded-lg hover:border-blue-600 text-lg font-medium">
               Watch Demo
             </button>
           </div>
           <p className="text-sm text-gray-500 mt-4">
-            No credit card required • Setup in 2 minutes
+            🎉 100% Free during beta • No credit card required • Full features
+            unlocked
           </p>
         </div>
 
@@ -177,112 +180,112 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="container mx-auto px-4 py-20 bg-gray-50">
+      {/* Beta Program Section */}
+      <section
+        id="beta"
+        className="container mx-auto px-4 py-20 bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl"
+      >
         <div className="text-center mb-16">
+          <div className="inline-block mb-4 px-4 py-2 bg-purple-100 text-purple-600 rounded-full text-sm font-medium">
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Limited Time Offer
+          </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Simple, Transparent Pricing
+            Join Our Public Beta Program
           </h2>
           <p className="text-xl text-gray-600">
-            Start free. Upgrade when you need more.
+            Get full access to all features - completely free during beta
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* Free Plan */}
-          <div className="bg-white p-8 rounded-xl shadow-lg border-2 border-gray-200">
-            <h3 className="text-2xl font-bold mb-2">Free</h3>
-            <p className="text-gray-600 mb-6">Perfect for testing</p>
-            <div className="mb-6">
-              <span className="text-4xl font-bold">$0</span>
-              <span className="text-gray-600">/month</span>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">
+                Beta Access
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Everything included, no limits
+              </p>
+              <div className="mb-8">
+                <span className="text-5xl font-bold text-blue-600">$0</span>
+                <span className="text-gray-600 text-lg">/month</span>
+                <p className="text-sm text-purple-600 font-medium mt-2">
+                  🎉 Free during entire beta period
+                </p>
+              </div>
             </div>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>1 widget</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>500 notifications/month</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>Basic customization</span>
-              </li>
-            </ul>
-            <button className="w-full py-3 border-2 border-gray-300 rounded-lg hover:border-blue-600 font-medium">
-              Start Free
-            </button>
-          </div>
 
-          {/* Starter Plan */}
-          <div className="bg-blue-600 text-white p-8 rounded-xl shadow-2xl border-2 border-blue-600 relative">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
-              MOST POPULAR
-            </div>
-            <h3 className="text-2xl font-bold mb-2">Starter</h3>
-            <p className="text-blue-100 mb-6">For small businesses</p>
-            <div className="mb-6">
-              <span className="text-4xl font-bold">$19</span>
-              <span className="text-blue-100">/month</span>
-            </div>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-200 mt-0.5" />
-                <span>1 website</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-200 mt-0.5" />
-                <span>5,000 notifications/month</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-200 mt-0.5" />
-                <span>Full customization</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-200 mt-0.5" />
-                <span>Remove branding</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-200 mt-0.5" />
-                <span>Email support</span>
-              </li>
-            </ul>
-            <button className="w-full py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-medium">
-              Get Started
-            </button>
-          </div>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Unlimited widgets</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Unlimited notifications</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Full customization</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Advanced analytics</span>
+                </div>
+              </div>
 
-          {/* Growth Plan */}
-          <div className="bg-white p-8 rounded-xl shadow-lg border-2 border-gray-200">
-            <h3 className="text-2xl font-bold mb-2">Growth</h3>
-            <p className="text-gray-600 mb-6">For agencies & teams</p>
-            <div className="mb-6">
-              <span className="text-4xl font-bold">$49</span>
-              <span className="text-gray-600">/month</span>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Priority email support</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">
+                    No branding (white-label)
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">
+                    Early access to new features
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">
+                    Lifetime discount when we launch
+                  </span>
+                </div>
+              </div>
             </div>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>3 websites</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>Unlimited notifications</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>Priority support</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                <span>Advanced analytics</span>
-              </li>
-            </ul>
-            <button className="w-full py-3 border-2 border-gray-300 rounded-lg hover:border-blue-600 font-medium">
-              Get Started
-            </button>
+
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8">
+              <h4 className="font-semibold text-gray-900 mb-3">
+                🎁 Beta Perks:
+              </h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li>✅ No credit card required</li>
+                <li>✅ No time limits during beta</li>
+                <li>✅ Direct line to our founders</li>
+                <li>✅ Influence product roadmap</li>
+                <li>✅ 50% off forever when we launch paid plans</li>
+              </ul>
+            </div>
+
+            <Link
+              href="/signup"
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium text-lg flex items-center justify-center gap-2 shadow-lg"
+            >
+              Join Beta Now - It's Free! <ArrowRight className="w-5 h-5" />
+            </Link>
+
+            <p className="text-center text-xs text-gray-500 mt-4">
+              By joining beta, you help us build a better product. Your feedback
+              matters! 💙
+            </p>
           </div>
         </div>
       </section>
@@ -294,14 +297,14 @@ export default function Home() {
             Ready to Boost Your Conversions?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join hundreds of businesses using social proof to increase sales by
-            30%
+            Join hundreds of beta testers already using TrustPulse Lite to
+            increase sales
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-lg font-medium"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-lg font-medium shadow-lg"
           >
-            Start Free Trial <ArrowRight className="w-5 h-5" />
+            Join Beta Program <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
       </section>
