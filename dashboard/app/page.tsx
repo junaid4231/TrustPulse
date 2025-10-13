@@ -23,8 +23,11 @@ export default function Home() {
           <Link href="#beta" className="text-gray-600 hover:text-blue-600">
             Beta Program
           </Link>
-          <Link href="#faq" className="text-gray-600 hover:text-blue-600">
+          <Link href="/faq" className="text-gray-600 hover:text-blue-600">
             FAQ
+          </Link>
+          <Link href="/about" className="text-gray-600 hover:text-blue-600">
+            About
           </Link>
         </nav>
         <div className="flex gap-4">
@@ -316,6 +319,9 @@ export default function Home() {
             © 2025 ProofPulse. All rights reserved.
           </div>
           <div className="flex gap-6">
+            <Link href="/about" className="text-gray-600 hover:text-blue-600">
+              About
+            </Link>
             <Link href="/privacy" className="text-gray-600 hover:text-blue-600">
               Privacy
             </Link>
