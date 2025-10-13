@@ -66,7 +66,7 @@ export default function SignupPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              TrustPulse Lite
+              ProofPulse
             </h1>
             <p className="text-gray-600">Create your account</p>
           </div>

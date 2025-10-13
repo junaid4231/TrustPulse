@@ -68,7 +68,7 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
             <Zap className="w-8 h-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">TrustPulse</span>
+            <span className="text-xl font-bold text-gray-900">ProofPulse</span>
           </div>
 
           {/* Navigation */}

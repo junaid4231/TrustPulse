@@ -478,7 +478,7 @@ export default function SettingsPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Use this API key to integrate TrustPulse with your applications
+                Use this API key to integrate ProofPulse with your applications
               </p>
             </div>
 
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                 invaluable. Share your thoughts:
               </p>
               <a
-                href="mailto:feedback@trustpulse-lite.com?subject=Beta Feedback"
+                href="mailto:feedback@proofpulse.com?subject=Beta Feedback"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium"
               >
                 Send Feedback

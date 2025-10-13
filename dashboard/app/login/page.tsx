@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Mail, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -56,7 +55,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              TrustPulse Lite
+              ProofPulse
             </h1>
             <p className="text-gray-600">Welcome back!</p>
           </div>

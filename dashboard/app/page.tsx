@@ -15,7 +15,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="text-2xl font-bold text-blue-600">TrustPulse Lite</div>
+        <div className="text-2xl font-bold text-blue-600">ProofPulse</div>
         <nav className="hidden md:flex gap-6">
           <Link href="#features" className="text-gray-600 hover:text-blue-600">
             Features
@@ -297,8 +297,8 @@ export default function Home() {
             Ready to Boost Your Conversions?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join hundreds of beta testers already using TrustPulse Lite to
-            increase sales
+            Join hundreds of beta testers already using ProofPulse to increase
+            sales
           </p>
           <Link
             href="/signup"
@@ -313,7 +313,7 @@ export default function Home() {
       <footer className="container mx-auto px-4 py-12 border-t border-gray-200">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-gray-600">
-            © 2025 TrustPulse Lite. All rights reserved.
+            © 2025 ProofPulse. All rights reserved.
           </div>
           <div className="flex gap-6">
             <Link href="/privacy" className="text-gray-600 hover:text-blue-600">

@@ -55,7 +55,7 @@ export default function WidgetDetailPage() {
   };
 
   const copyEmbedCode = () => {
-    const embedCode = `<script src="https://cdn.trustpulse-lite.com/widget.js" data-widget="${widgetId}"></script>`;
+    const embedCode = `<script src="https://cdn.proofpulse.com/widget.js" data-widget="${widgetId}"></script>`;
     navigator.clipboard.writeText(embedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -94,7 +94,7 @@ export default function WidgetDetailPage() {
 
   if (!widget) return null;
 
-  const embedCode = `<script src="https://cdn.trustpulse-lite.com/widget.js" data-widget="${widgetId}"></script>`;
+  const embedCode = `<script src="https://cdn.proofpulse.com/widget.js" data-widget="${widgetId}"></script>`;
 
   return (
     <div className="max-w-6xl mx-auto">
