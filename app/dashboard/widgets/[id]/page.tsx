@@ -94,7 +94,7 @@ export default function WidgetDetailPage() {
 
   if (!widget) return null;
 
-  const embedCode = `<script src="https://cdn.proofpulse.com/widget.js" data-widget="${widgetId}"></script>`;
+  const embedCode = `<script src="https://proofpulse.vercel.app/widget/widget.js" data-widget="${widgetId}"></script>`;
 
   return (
     <div className="max-w-6xl mx-auto">

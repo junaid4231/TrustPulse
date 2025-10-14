@@ -491,7 +491,7 @@ export default function SettingsPage() {
                   {`<script src="${
                     typeof window !== "undefined"
                       ? window.location.origin
-                      : "https://your-domain.com"
+                      : "https://proofpulse.vercel.app"
                   }/widget/widget.js" data-widget-id="${user?.id}"></script>`}
                 </code>
                 <button
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                 invaluable. Share your thoughts:
               </p>
               <a
-                href="mailto:feedback@proofpulse.com?subject=Beta Feedback"
+                href="mailto:feedback@proofpulse.vercel.app?subject=Beta Feedback"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium"
               >
                 Send Feedback

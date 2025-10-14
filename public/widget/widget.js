@@ -4,9 +4,9 @@
   // Configuration
   const CONFIG = {
     API_BASE_URL:
-      window.location.hostname === "localhost"
+      typeof window !== "undefined" && window.location.hostname === "localhost"
         ? "http://localhost:3000"
-        : "http://localhost:3000", // CHANGE THIS BEFORE DEPLOY
+        : "https://proofpulse.vercel.app", // We'll update this after first deploy
     NOTIFICATION_DURATION: 6000,
     NOTIFICATION_GAP: 2000,
     MAX_RETRIES: 3,
