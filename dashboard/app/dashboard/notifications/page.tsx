@@ -3,20 +3,28 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import {
-  Plus,
-  Bell,
-  Edit,
-  Trash2,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-} from "lucide-react";
+import { Plus, Bell, Trash2, Eye, EyeOff, Search } from "lucide-react";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [widgets, setWidgets] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      name: string;
+      message: string;
+      widget_id: string;
+      type: string;
+      location?: string;
+      timestamp: string;
+      is_active: boolean;
+    }>
+  >([]);
+  const [widgets, setWidgets] = useState<
+    Array<{
+      id: string;
+      name: string;
+      primary_color?: string;
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterWidget, setFilterWidget] = useState("all");

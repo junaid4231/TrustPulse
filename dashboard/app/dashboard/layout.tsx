@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,40 +29,13 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ email: string } | null>(null);
   const [activeItem, setActiveItem] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    checkUser();
-    // Set active item based on current path
-    const path = window.location.pathname;
-    if (path === "/dashboard") setActiveItem("dashboard");
-    else if (path.startsWith("/dashboard/widgets")) setActiveItem("widgets");
-    else if (path.startsWith("/dashboard/analytics"))
-      setActiveItem("analytics");
-    else if (path.startsWith("/dashboard/settings")) setActiveItem("settings");
-    else if (path.startsWith("/dashboard/notifications"))
-      setActiveItem("notifications");
-    else if (path.startsWith("/dashboard/help")) setActiveItem("help");
-
-    // Check if mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true); // Auto-open on desktop
-      } else {
-        setSidebarOpen(false); // Auto-close on mobile
-      }
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const checkUser = async () => {
+  // ✅ Define `checkUser` before useEffect
+  const checkUser = useCallback(async () => {
     try {
       const {
         data: { user },
@@ -73,28 +46,55 @@ export default function DashboardLayout({
         return;
       }
 
-      setUser(user);
+      // Fix: Safely extract email for type compatibility
+      if (!user.email) {
+        router.push("/login");
+        return;
+      }
+      setUser({ email: user.email });
     } catch (error) {
+      console.error("Error checking user:", error);
       router.push("/login");
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    checkUser();
+
+    // Set active menu item
+    const path = window.location.pathname;
+    if (path === "/dashboard") setActiveItem("dashboard");
+    else if (path.startsWith("/dashboard/widgets")) setActiveItem("widgets");
+    else if (path.startsWith("/dashboard/analytics"))
+      setActiveItem("analytics");
+    else if (path.startsWith("/dashboard/settings")) setActiveItem("settings");
+    else if (path.startsWith("/dashboard/notifications"))
+      setActiveItem("notifications");
+    else if (path.startsWith("/dashboard/help")) setActiveItem("help");
+
+    // Responsive sidebar handling
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, [checkUser]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-    console.log("Sidebar toggled:", !sidebarOpen);
-  };
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const closeSidebar = () => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
+    if (isMobile) setSidebarOpen(false);
   };
 
   if (loading) {
@@ -108,7 +108,7 @@ export default function DashboardLayout({
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
-        {/* Mobile Header */}
+        {/* ✅ Mobile Header */}
         <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
@@ -128,7 +128,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Overlay for mobile */}
+        {/* ✅ Overlay for mobile */}
         {sidebarOpen && isMobile && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -136,13 +136,13 @@ export default function DashboardLayout({
           />
         )}
 
-        {/* Enhanced Sidebar */}
+        {/* ✅ Sidebar */}
         <aside
           className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          {/* Enhanced Logo Section */}
+          {/* Logo Section */}
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -161,7 +161,6 @@ export default function DashboardLayout({
                   <p className="text-blue-100 text-xs">Social Proof Platform</p>
                 </div>
               </div>
-              {/* Close button for mobile */}
               <button
                 onClick={closeSidebar}
                 className="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
@@ -171,198 +170,51 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Enhanced Navigation */}
+          {/* Navigation */}
           <nav className="p-4 space-y-1">
-            <Link
-              href="/dashboard"
-              onClick={() => {
-                setActiveItem("dashboard");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "dashboard"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "dashboard"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
+            {[
+              { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+              { id: "widgets", icon: Bell, label: "Widgets" },
+              { id: "analytics", icon: BarChart3, label: "Analytics" },
+              { id: "notifications", icon: Bell, label: "Notifications" },
+              { id: "settings", icon: Settings, label: "Settings" },
+              { id: "help", icon: HelpCircle, label: "Help" },
+            ].map(({ id, icon: Icon, label }) => (
+              <Link
+                key={id}
+                href={`/dashboard/${id === "dashboard" ? "" : id}`}
+                onClick={() => {
+                  setActiveItem(id);
+                  closeSidebar();
+                }}
+                className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                  activeItem === id
+                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
+                    : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
                 }`}
               >
-                <LayoutDashboard
-                  className={`w-4 h-4 ${
-                    activeItem === "dashboard" ? "text-white" : "text-blue-600"
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                    activeItem === id
+                      ? "bg-white/20"
+                      : "bg-blue-100 group-hover:bg-blue-200"
                   }`}
-                />
-              </div>
-              <span className="font-medium">Dashboard</span>
-              {activeItem === "dashboard" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
-
-            <Link
-              href="/dashboard/widgets"
-              onClick={() => {
-                setActiveItem("widgets");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "widgets"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "widgets"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
-                }`}
-              >
-                <Bell
-                  className={`w-4 h-4 ${
-                    activeItem === "widgets" ? "text-white" : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <span className="font-medium">Widgets</span>
-              {activeItem === "widgets" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
-
-            <Link
-              href="/dashboard/analytics"
-              onClick={() => {
-                setActiveItem("analytics");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "analytics"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "analytics"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
-                }`}
-              >
-                <BarChart3
-                  className={`w-4 h-4 ${
-                    activeItem === "analytics" ? "text-white" : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <span className="font-medium">Analytics</span>
-              {activeItem === "analytics" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
-
-            <Link
-              href="/dashboard/notifications"
-              onClick={() => {
-                setActiveItem("notifications");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "notifications"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "notifications"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
-                }`}
-              >
-                <Bell
-                  className={`w-4 h-4 ${
-                    activeItem === "notifications"
-                      ? "text-white"
-                      : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <span className="font-medium">Notifications</span>
-              {activeItem === "notifications" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
-
-            <Link
-              href="/dashboard/settings"
-              onClick={() => {
-                setActiveItem("settings");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "settings"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "settings"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
-                }`}
-              >
-                <Settings
-                  className={`w-4 h-4 ${
-                    activeItem === "settings" ? "text-white" : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <span className="font-medium">Settings</span>
-              {activeItem === "settings" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
-
-            <Link
-              href="/dashboard/help"
-              onClick={() => {
-                setActiveItem("help");
-                closeSidebar();
-              }}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                activeItem === "help"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  activeItem === "help"
-                    ? "bg-white/20"
-                    : "bg-blue-100 group-hover:bg-blue-200"
-                }`}
-              >
-                <HelpCircle
-                  className={`w-4 h-4 ${
-                    activeItem === "help" ? "text-white" : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <span className="font-medium">Help</span>
-              {activeItem === "help" && (
-                <ChevronRight className="w-4 h-4 ml-auto text-white" />
-              )}
-            </Link>
+                >
+                  <Icon
+                    className={`w-4 h-4 ${
+                      activeItem === id ? "text-white" : "text-blue-600"
+                    }`}
+                  />
+                </div>
+                <span className="font-medium">{label}</span>
+                {activeItem === id && (
+                  <ChevronRight className="w-4 h-4 ml-auto text-white" />
+                )}
+              </Link>
+            ))}
           </nav>
 
-          {/* Enhanced User Profile & Logout */}
+          {/* User Profile & Logout */}
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
             <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl mb-3 border border-gray-200">
               <div className="flex items-center gap-3">
@@ -392,7 +244,7 @@ export default function DashboardLayout({
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* ✅ Main Content */}
         <main
           className={`transition-all duration-300 ${
             sidebarOpen ? "ml-72" : "ml-0"
@@ -418,6 +270,7 @@ export default function DashboardLayout({
               </span>
             </button>
           </div>
+
           {children}
         </main>
       </div>

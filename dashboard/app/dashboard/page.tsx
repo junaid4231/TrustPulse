@@ -14,13 +14,20 @@ import {
   Zap,
   Target,
   ArrowUpRight,
-  ArrowDownRight,
   Sparkles,
   Star,
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [widgets, setWidgets] = useState<any[]>([]);
+  const [widgets, setWidgets] = useState<
+    Array<{
+      id: string;
+      name: string;
+      domain: string;
+      primary_color?: string;
+      is_active: boolean;
+    }>
+  >([]);
   const [stats, setStats] = useState({
     totalWidgets: 0,
     totalImpressions: 0,
@@ -101,7 +108,7 @@ export default function DashboardPage() {
               <Sparkles className="w-8 h-8 text-yellow-300 animate-pulse" />
             </div>
             <p className="text-blue-100 text-lg">
-              Welcome back! Here's your social proof overview.
+              Welcome back! Here&apos;s your social proof overview.
             </p>
             <div className="flex items-center gap-4 mt-4">
               <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">

@@ -121,8 +121,8 @@ export default function Home() {
             </div>
             <h3 className="text-xl font-bold mb-3">Real-Time Notifications</h3>
             <p className="text-gray-600">
-              Show live activity like "John just purchased" or "23 people
-              viewing now" to create urgency and FOMO.
+              Show live activity like &quot;John just purchased&quot; or
+              &quot;23 people viewing now&quot; to create urgency and FOMO.
             </p>
           </div>
 
@@ -166,7 +166,7 @@ export default function Home() {
             <h3 className="text-xl font-bold mb-3">Simple Analytics</h3>
             <p className="text-gray-600">
               See how many people viewed and clicked your notifications. Track
-              what's working and optimize.
+              what&apos;s working and optimize.
             </p>
           </div>
 
@@ -282,7 +282,7 @@ export default function Home() {
               href="/signup"
               className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium text-lg flex items-center justify-center gap-2 shadow-lg"
             >
-              Join Beta Now - It's Free! <ArrowRight className="w-5 h-5" />
+              Join Beta Now - It&apos;s Free! <ArrowRight className="w-5 h-5" />
             </Link>
 
             <p className="text-center text-xs text-gray-500 mt-4">
