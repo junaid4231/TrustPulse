@@ -29,11 +29,18 @@ export async function GET(
     if (!uuidRegex.test(widgetId)) {
       return NextResponse.json(
         { error: "Invalid widget ID format" },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+          },
+        }
       );
     }
 
-    // Fetch widget settings - REMOVED is_active filter for now
+    // Fetch widget settings
     const { data: widget, error: widgetError } = await supabase
       .from("widgets")
       .select("*")
@@ -51,8 +58,7 @@ export async function GET(
           headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers":
-              "Content-Type, Cache-Control, Accept",
+            "Access-Control-Allow-Headers": "Content-Type",
           },
         }
       );
@@ -73,7 +79,7 @@ export async function GET(
       console.error("Notifications fetch error:", notificationsError);
     }
 
-    // Return widget data with enhanced information
+    // Return widget data
     const response = {
       widget: {
         id: widget.id,
@@ -89,7 +95,7 @@ export async function GET(
         name: notification.name,
         location: notification.location,
         timestamp: notification.timestamp,
-        is_active: notification.is_active, // Include this for widget.js
+        is_active: notification.is_active,
       })),
       meta: {
         total_notifications: notifications?.length || 0,
@@ -98,6 +104,7 @@ export async function GET(
       },
     };
 
+    // ✅ CRITICAL: CORS headers MUST be here
     return NextResponse.json(response, {
       headers: {
         "Access-Control-Allow-Origin": "*",
@@ -123,7 +130,7 @@ export async function GET(
   }
 }
 
-// Handle CORS preflight
+// ✅ CRITICAL: Handle CORS preflight
 export async function OPTIONS() {
   return NextResponse.json(
     {},

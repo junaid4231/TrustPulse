@@ -1,26 +1,41 @@
 (function () {
   "use strict";
 
+  // Get the script tag - FIXED VERSION
+  const currentScript =
+    document.currentScript || document.querySelector("script[data-widget]");
+  const widgetId = currentScript
+    ? currentScript.getAttribute("data-widget")
+    : null;
+
+  // Debug log
+  console.log("[ProofPulse] Script tag:", currentScript);
+  console.log("[ProofPulse] Widget ID:", widgetId);
+
+  if (!widgetId) {
+    console.error("[ProofPulse] Error: data-widget attribute is required");
+    console.error(
+      "[ProofPulse] Make sure your script tag looks like: <script src='...' data-widget='YOUR-ID'></script>"
+    );
+    return;
+  }
+
   // Configuration
   const CONFIG = {
     API_BASE_URL:
-      typeof window !== "undefined" && window.location.hostname === "localhost"
+      window.location.hostname === "localhost"
         ? "http://localhost:3000"
-        : "https://proofpulse.vercel.app", // We'll update this after first deploy
+        : "https://proofpulse.vercel.app", // Make sure this is YOUR URL
     NOTIFICATION_DURATION: 6000,
     NOTIFICATION_GAP: 2000,
     MAX_RETRIES: 3,
     RETRY_DELAY: 2000,
   };
 
-  // Get widget ID from script tag
-  const currentScript = document.currentScript;
-  const widgetId = currentScript?.getAttribute("data-widget");
+  console.log("[ProofPulse] Initialized with API:", CONFIG.API_BASE_URL);
+  console.log("[ProofPulse] Widget ID to fetch:", widgetId);
 
-  if (!widgetId) {
-    console.error("[ProofPulse] Error: data-widget attribute is required");
-    return;
-  }
+  // Rest of your code continues...
 
   // State
   let widgetData = null;
@@ -56,19 +71,21 @@
   }
 
   // Fetch widget data from API
+  // Fetch widget data from API
   async function fetchWidgetData() {
     try {
-      const data = await fetchWithRetry(
-        `${CONFIG.API_BASE_URL}/api/widget/${widgetId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          cache: "no-cache",
-        }
-      );
+      // MAKE SURE THIS LINE USES TEMPLATE LITERALS CORRECTLY:
+      const url = `${CONFIG.API_BASE_URL}/api/widget/${widgetId}`;
+      console.log("[ProofPulse] Fetching from:", url);
+
+      const data = await fetchWithRetry(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        cache: "no-cache",
+      });
 
       if (
         !data.widget ||
