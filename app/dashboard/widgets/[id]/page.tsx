@@ -55,7 +55,7 @@ export default function WidgetDetailPage() {
   };
 
   const copyEmbedCode = () => {
-    const embedCode = `<script src="https://cdn.proofpulse.com/widget.js" data-widget="${widgetId}"></script>`;
+    // Use the embedCode variable that's already defined, don't create a new one!
     navigator.clipboard.writeText(embedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
