@@ -34,7 +34,6 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // ✅ Define `checkUser` before useEffect
   const checkUser = useCallback(async () => {
     try {
       const {
@@ -46,7 +45,6 @@ export default function DashboardLayout({
         return;
       }
 
-      // Fix: Safely extract email for type compatibility
       if (!user.email) {
         router.push("/login");
         return;
@@ -108,13 +106,14 @@ export default function DashboardLayout({
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
-        {/* ✅ Mobile Header */}
+        {/* Mobile Header */}
         <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSidebar}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Toggle menu"
               >
                 <Menu className="w-6 h-6 text-gray-700" />
               </button>
@@ -128,150 +127,195 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* ✅ Overlay for mobile */}
+        {/* Overlay for mobile */}
         {sidebarOpen && isMobile && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
             onClick={closeSidebar}
+            aria-hidden="true"
           />
         )}
 
-        {/* ✅ Sidebar */}
+        {/* Sidebar - FIXED VERSION */}
         <aside
-          className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
+          className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          {/* Logo Section */}
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-white" />
+          {/* Flex container for entire sidebar */}
+          <div className="h-full flex flex-col">
+            {/* Logo Section - Fixed at top */}
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                      <Sparkles className="w-2 h-2 text-white" />
+                    </div>
                   </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-2 h-2 text-white" />
+                  <div>
+                    <span className="text-xl font-bold text-white">
+                      ProofPulse
+                    </span>
+                    <p className="text-blue-100 text-xs">Beta</p>
                   </div>
                 </div>
-                <div>
-                  <span className="text-xl font-bold text-white">
-                    ProofPulse
+                <button
+                  onClick={closeSidebar}
+                  className="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation - Scrollable middle section */}
+            <nav className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1">
+              {[
+                {
+                  id: "dashboard",
+                  icon: LayoutDashboard,
+                  label: "Dashboard",
+                  href: "/dashboard",
+                },
+                {
+                  id: "widgets",
+                  icon: Bell,
+                  label: "Widgets",
+                  href: "/dashboard/widgets",
+                },
+                {
+                  id: "analytics",
+                  icon: BarChart3,
+                  label: "Analytics",
+                  href: "/dashboard/analytics",
+                },
+                {
+                  id: "settings",
+                  icon: Settings,
+                  label: "Settings",
+                  href: "/dashboard/settings",
+                },
+                {
+                  id: "help",
+                  icon: HelpCircle,
+                  label: "Help & Support",
+                  href: "/dashboard/help",
+                },
+              ].map(({ id, icon: Icon, label, href }) => (
+                <Link
+                  key={id}
+                  href={href}
+                  onClick={() => {
+                    setActiveItem(id);
+                    closeSidebar();
+                  }}
+                  className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                    activeItem === id
+                      ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
+                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                      activeItem === id
+                        ? "bg-white/20"
+                        : "bg-blue-100 group-hover:bg-blue-200"
+                    }`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 ${
+                        activeItem === id ? "text-white" : "text-blue-600"
+                      }`}
+                    />
+                  </div>
+                  <span className="font-medium text-sm">{label}</span>
+                  {activeItem === id && (
+                    <ChevronRight className="w-4 h-4 ml-auto text-white flex-shrink-0" />
+                  )}
+                </Link>
+              ))}
+
+              {/* Beta Badge */}
+              <div className="mt-4 mx-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-semibold text-purple-900">
+                    Beta Program
                   </span>
-                  <p className="text-blue-100 text-xs">Social Proof Platform</p>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  You're using ProofPulse for free during our beta period!
+                </p>
+              </div>
+            </nav>
+
+            {/* User Profile & Logout - Fixed at bottom */}
+            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
+              <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl mb-3 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {user?.email?.split("@")[0] || "User"}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-3 h-3 text-yellow-500" />
+                      <p className="text-xs text-gray-600">Beta Tester</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button
-                onClick={closeSidebar}
-                className="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-300 hover:shadow-md group"
               >
-                <X className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-red-100 group-hover:bg-red-200 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
+                  <LogOut className="w-4 h-4 text-red-600" />
+                </div>
+                <span className="font-medium text-sm">Logout</span>
               </button>
             </div>
           </div>
-
-          {/* Navigation */}
-          <nav className="p-4 space-y-1">
-            {[
-              { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-              { id: "widgets", icon: Bell, label: "Widgets" },
-              { id: "analytics", icon: BarChart3, label: "Analytics" },
-              { id: "notifications", icon: Bell, label: "Notifications" },
-              { id: "settings", icon: Settings, label: "Settings" },
-              { id: "help", icon: HelpCircle, label: "Help" },
-            ].map(({ id, icon: Icon, label }) => (
-              <Link
-                key={id}
-                href={`/dashboard/${id === "dashboard" ? "" : id}`}
-                onClick={() => {
-                  setActiveItem(id);
-                  closeSidebar();
-                }}
-                className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                  activeItem === id
-                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25"
-                    : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                    activeItem === id
-                      ? "bg-white/20"
-                      : "bg-blue-100 group-hover:bg-blue-200"
-                  }`}
-                >
-                  <Icon
-                    className={`w-4 h-4 ${
-                      activeItem === id ? "text-white" : "text-blue-600"
-                    }`}
-                  />
-                </div>
-                <span className="font-medium">{label}</span>
-                {activeItem === id && (
-                  <ChevronRight className="w-4 h-4 ml-auto text-white" />
-                )}
-              </Link>
-            ))}
-          </nav>
-
-          {/* User Profile & Logout */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-            <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl mb-3 border border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {user?.email?.split("@")[0] || "User"}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Crown className="w-3 h-3 text-yellow-500" />
-                    <p className="text-xs text-gray-600">Free Plan</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-300 hover:shadow-md group"
-            >
-              <div className="w-8 h-8 bg-red-100 group-hover:bg-red-200 rounded-lg flex items-center justify-center transition-colors">
-                <LogOut className="w-4 h-4 text-red-600" />
-              </div>
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
         </aside>
 
-        {/* ✅ Main Content */}
+        {/* Main Content */}
         <main
-          className={`transition-all duration-300 ${
-            sidebarOpen ? "ml-72" : "ml-0"
-          } ${isMobile ? "pt-16" : "pt-0"} p-4 lg:p-8`}
+          className={`transition-all duration-300 min-h-screen ${
+            sidebarOpen && !isMobile ? "lg:ml-72" : "lg:ml-0"
+          } ${isMobile ? "pt-16" : ""}`}
         >
           {/* Desktop Sidebar Toggle */}
-          <div className="hidden lg:block mb-6">
-            <button
-              onClick={toggleSidebar}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm ${
-                sidebarOpen
-                  ? "bg-blue-50 border border-blue-200 text-blue-700"
-                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {sidebarOpen ? (
-                <X className="w-4 h-4" />
-              ) : (
-                <Menu className="w-4 h-4" />
-              )}
-              <span className="text-sm font-medium">
-                {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-              </span>
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="fixed top-4 left-4 z-30">
+              <button
+                onClick={toggleSidebar}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${
+                  sidebarOpen
+                    ? "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {sidebarOpen ? (
+                  <X className="w-4 h-4" />
+                ) : (
+                  <Menu className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium">
+                  {sidebarOpen ? "Hide" : "Menu"}
+                </span>
+              </button>
+            </div>
+          )}
 
-          {children}
+          {/* Content Area */}
+          <div className="p-4 lg:p-8">{children}</div>
         </main>
       </div>
     </ErrorBoundary>
