@@ -9,12 +9,15 @@ import {
   Mail,
   Lock,
   Bell,
-  Key,
-  CreditCard,
+  Code,
   AlertCircle,
   CheckCircle,
   Sparkles,
   Gift,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -22,7 +25,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [showWidgetId, setShowWidgetId] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -35,7 +39,6 @@ export default function SettingsPage() {
   });
 
   const [passwordData, setPasswordData] = useState({
-    current_password: "",
     new_password: "",
     confirm_password: "",
   });
@@ -55,28 +58,36 @@ export default function SettingsPage() {
     try {
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (userError || !user) {
+        console.error("Auth error:", userError);
         router.push("/login");
         return;
       }
 
+      console.log("Loaded user:", user);
       setUser(user);
+
+      // Set form data from auth user
       setProfileData({
         full_name: user.user_metadata?.full_name || "",
         email: user.email || "",
       });
 
-      // Load user profile
-      const { data: profileData } = await supabase
+      // Load profile settings from database
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
+      console.log("Profile data:", profileData);
+      console.log("Profile error:", profileError);
+
       if (profileData) {
-        setProfile(profileData);
+        // Update notification settings from database
         setNotificationSettings({
           email_notifications: profileData.email_notifications ?? true,
           widget_alerts: profileData.widget_alerts ?? true,
@@ -101,25 +112,47 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      // Update user metadata
-      const { error: updateError } = await supabase.auth.updateUser({
+      console.log("Updating profile with:", profileData.full_name);
+
+      // Step 1: Update auth user metadata
+      const { error: authError } = await supabase.auth.updateUser({
         data: { full_name: profileData.full_name },
       });
 
-      if (updateError) throw updateError;
+      if (authError) {
+        console.error("Auth update error:", authError);
+        throw authError;
+      }
 
-      // Update profile in database
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: user.id,
-        full_name: profileData.full_name,
-        updated_at: new Date().toISOString(),
-      });
+      console.log("Auth metadata updated successfully");
 
-      if (profileError) throw profileError;
+      // Step 2: Update profiles table using UPDATE with WHERE clause
+      const { error: profileError, data: updatedData } = await supabase
+        .from("profiles")
+        .update({
+          full_name: profileData.full_name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+        .select();
+
+      console.log("Profile update result:", { profileError, updatedData });
+
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+        throw profileError;
+      }
 
       showMessage("success", "Profile updated successfully!");
+
+      // Reload user data to reflect changes
+      await loadUserData();
     } catch (error: any) {
-      showMessage("error", error.message || "Failed to update profile");
+      console.error("Profile update failed:", error);
+      showMessage(
+        "error",
+        error.message || "Failed to update profile. Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -131,7 +164,7 @@ export default function SettingsPage() {
 
     try {
       if (passwordData.new_password !== passwordData.confirm_password) {
-        throw new Error("New passwords don't match");
+        throw new Error("Passwords don't match");
       }
 
       if (passwordData.new_password.length < 6) {
@@ -145,7 +178,6 @@ export default function SettingsPage() {
       if (error) throw error;
 
       setPasswordData({
-        current_password: "",
         new_password: "",
         confirm_password: "",
       });
@@ -162,14 +194,16 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
-        email_notifications: notificationSettings.email_notifications,
-        widget_alerts: notificationSettings.widget_alerts,
-        weekly_reports: notificationSettings.weekly_reports,
-        marketing_emails: notificationSettings.marketing_emails,
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          email_notifications: notificationSettings.email_notifications,
+          widget_alerts: notificationSettings.widget_alerts,
+          weekly_reports: notificationSettings.weekly_reports,
+          marketing_emails: notificationSettings.marketing_emails,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
 
       if (error) throw error;
 
@@ -181,6 +215,16 @@ export default function SettingsPage() {
     }
   };
 
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedItem(label);
+      setTimeout(() => setCopiedItem(null), 2000);
+    } catch (error) {
+      showMessage("error", "Failed to copy to clipboard");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -188,6 +232,21 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600">Failed to load user data</p>
+        </div>
+      </div>
+    );
+  }
+
+  const widgetScript = `<script src="${
+    typeof window !== "undefined" ? window.location.origin : ""
+  }/widget/widget.js" data-widget-id="${user.id}"></script>`;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -220,7 +279,9 @@ export default function SettingsPage() {
         {/* Profile Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-6">
-            <User className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <User className="w-5 h-5 text-blue-600" />
+            </div>
             <h2 className="text-xl font-semibold text-gray-900">
               Profile Information
             </h2>
@@ -238,6 +299,7 @@ export default function SettingsPage() {
                   setProfileData({ ...profileData, full_name: e.target.value })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="John Doe"
                 required
               />
             </div>
@@ -250,17 +312,17 @@ export default function SettingsPage() {
                 type="email"
                 value={profileData.email}
                 disabled
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Email cannot be changed. Contact support if needed.
+                Email cannot be changed for security reasons
               </p>
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="w-4 h-4" />
               {saving ? "Saving..." : "Save Changes"}
@@ -271,9 +333,11 @@ export default function SettingsPage() {
         {/* Password Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-6">
-            <Lock className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Lock className="w-5 h-5 text-purple-600" />
+            </div>
             <h2 className="text-xl font-semibold text-gray-900">
-              Password & Security
+              Change Password
             </h2>
           </div>
 
@@ -292,9 +356,12 @@ export default function SettingsPage() {
                   })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter new password"
                 minLength={6}
-                required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Must be at least 6 characters
+              </p>
             </div>
 
             <div>
@@ -311,8 +378,8 @@ export default function SettingsPage() {
                   })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Confirm new password"
                 minLength={6}
-                required
               />
             </div>
 
@@ -323,7 +390,7 @@ export default function SettingsPage() {
                 !passwordData.new_password ||
                 !passwordData.confirm_password
               }
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Lock className="w-4 h-4" />
               {saving ? "Updating..." : "Update Password"}
@@ -331,114 +398,241 @@ export default function SettingsPage() {
           </form>
         </div>
 
+        {/* Widget Installation - IMPROVED */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Code className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Widget Installation
+              </h2>
+              <p className="text-sm text-gray-600">
+                Add ProofPulse to your website
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Step 1: Widget ID */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                  1
+                </div>
+                <h3 className="font-semibold text-gray-900">
+                  Your Widget ID (for reference)
+                </h3>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <input
+                    type={showWidgetId ? "text" : "password"}
+                    value={user.id}
+                    readOnly
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowWidgetId(!showWidgetId)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showWidgetId ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(user.id, "widget-id")}
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                >
+                  {copiedItem === "widget-id" ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                This is your unique identifier. Keep it safe - it's needed for
+                the widget to work.
+              </p>
+            </div>
+
+            {/* Step 2: Installation Code */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                  2
+                </div>
+                <h3 className="font-semibold text-gray-900">
+                  Copy Installation Code
+                </h3>
+              </div>
+              <div className="relative">
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs">
+                  <code>{widgetScript}</code>
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(widgetScript, "widget-script")}
+                  className="absolute top-3 right-3 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-sm flex items-center gap-2 transition-colors"
+                >
+                  {copiedItem === "widget-script" ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Step 3: Instructions */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                  3
+                </div>
+                <h3 className="font-semibold text-gray-900">
+                  Add to Your Website
+                </h3>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900 mb-3 font-medium">
+                  Paste before the closing &lt;/body&gt; tag:
+                </p>
+                <div className="space-y-2 text-sm text-blue-800">
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      <strong>HTML/Static:</strong> Add to index.html
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      <strong>WordPress:</strong> Use "Insert Headers and
+                      Footers" plugin
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      <strong>Shopify:</strong> Edit theme.liquid file
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      <strong>Webflow/Wix:</strong> Add in custom code settings
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Help */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm text-purple-900 mb-2 font-medium">
+                Need help installing?
+              </p>
+              <p className="text-sm text-purple-800 mb-3">
+                Contact support for installation assistance.
+              </p>
+              <a
+                href="mailto:support@proofpulse.com"
+                className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors"
+              >
+                Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Notification Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-6">
-            <Bell className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Bell className="w-5 h-5 text-orange-600" />
+            </div>
             <h2 className="text-xl font-semibold text-gray-900">
               Notification Preferences
             </h2>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">
-                  Email Notifications
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Receive important account updates via email
-                </p>
+            {[
+              {
+                key: "email_notifications",
+                title: "Email Notifications",
+                description: "Important account updates and alerts",
+              },
+              {
+                key: "widget_alerts",
+                title: "Widget Alerts",
+                description: "Notifications about widget activity",
+              },
+              {
+                key: "weekly_reports",
+                title: "Weekly Reports",
+                description: "Analytics summaries every week",
+              },
+              {
+                key: "marketing_emails",
+                title: "Product Updates",
+                description: "New features and improvements",
+              },
+            ].map((setting) => (
+              <div
+                key={setting.key}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              >
+                <div>
+                  <h3 className="font-medium text-gray-900">{setting.title}</h3>
+                  <p className="text-sm text-gray-600">{setting.description}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      notificationSettings[
+                        setting.key as keyof typeof notificationSettings
+                      ]
+                    }
+                    onChange={(e) =>
+                      setNotificationSettings({
+                        ...notificationSettings,
+                        [setting.key]: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.email_notifications}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      email_notifications: e.target.checked,
-                    })
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Widget Alerts</h3>
-                <p className="text-sm text-gray-600">
-                  Get notified when widgets are created or updated
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.widget_alerts}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      widget_alerts: e.target.checked,
-                    })
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Weekly Reports</h3>
-                <p className="text-sm text-gray-600">
-                  Receive weekly analytics and performance reports
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.weekly_reports}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      weekly_reports: e.target.checked,
-                    })
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Product Updates</h3>
-                <p className="text-sm text-gray-600">
-                  Beta updates, tips, and new feature announcements
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.marketing_emails}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      marketing_emails: e.target.checked,
-                    })
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
+            ))}
 
             <button
+              type="button"
               onClick={handleNotificationUpdate}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Bell className="w-4 h-4" />
               {saving ? "Saving..." : "Save Preferences"}
@@ -446,243 +640,53 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* API Settings */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Key className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              API & Integration
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                API Key
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={`tp_${user?.id?.slice(0, 8)}...`}
-                  disabled
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                />
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`tp_${user?.id}`);
-                    showMessage("success", "API key copied to clipboard!");
-                  }}
-                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                >
-                  Copy
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Use this API key to integrate ProofPulse with your applications
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Widget Script
-              </label>
-              <div className="bg-gray-50 p-4 rounded-lg relative">
-                <code className="text-sm text-gray-700 block overflow-x-auto">
-                  {`<script src="${
-                    typeof window !== "undefined"
-                      ? window.location.origin
-                      : "https://proofpulse.vercel.app"
-                  }/widget/widget.js" data-widget-id="${user?.id}"></script>`}
-                </code>
-                <button
-                  onClick={() => {
-                    const script = `<script src="${
-                      typeof window !== "undefined"
-                        ? window.location.origin
-                        : "https://your-domain.com"
-                    }/widget/widget.js" data-widget-id="${user?.id}"></script>`;
-                    navigator.clipboard.writeText(script);
-                    showMessage(
-                      "success",
-                      "Widget script copied to clipboard!"
-                    );
-                  }}
-                  className="absolute top-2 right-2 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Copy
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Copy this script and paste it before the closing body tag on
-                your website
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Beta Program Status */}
+        {/* Beta Status */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-sm border-2 border-blue-200 p-6">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                Beta Program Status
+                Beta Tester Status
               </h2>
               <p className="text-sm text-gray-600">
-                You're part of something special! 🎉
+                Thank you for being an early adopter! 🎉
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Type
-              </label>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-bold">
-                  Beta Tester
-                </span>
-                <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                  All Features Unlocked
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-2">
-                🎁 100% free during beta period
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Member Since
-              </label>
-              <p className="text-gray-900 font-medium">
-                {user?.created_at
-                  ? new Date(user.created_at).toLocaleDateString()
-                  : "N/A"}
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Early adopter #{user?.id?.slice(0, 8).toUpperCase()}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-blue-200 mb-4">
-            <div className="flex items-start gap-3 mb-4">
-              <Gift className="w-6 h-6 text-purple-600 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Your Beta Benefits
+          <div className="bg-white rounded-lg p-5 border border-blue-200 mb-4">
+            <div className="flex items-start gap-3">
+              <Gift className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  Your Benefits
                 </h3>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>Unlimited widgets (normally limited to 3)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>Unlimited notifications (normally 5,000/month)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>No branding/watermarks (normally $19/month)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>Priority email support</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>Early access to all new features</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span>50% lifetime discount when we launch</span>
-                  </li>
-                </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+                  {[
+                    "Unlimited widgets",
+                    "Unlimited notifications",
+                    "No branding",
+                    "Priority support",
+                    "Early feature access",
+                    "50% lifetime discount",
+                  ].map((benefit, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span>{benefit}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-3">
-                💬 <strong>Help us improve!</strong> Your feedback is
-                invaluable. Share your thoughts:
-              </p>
-              <a
-                href="mailto:feedback@proofpulse.vercel.app?subject=Beta Feedback"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium"
-              >
-                Send Feedback
-              </a>
             </div>
           </div>
 
           <div className="p-4 bg-blue-100 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> You'll receive an email notification before
-              beta ends and paid plans launch. Your loyalty discount will be
-              automatically applied! 💙
+              <strong>💙 Early Adopter Benefit:</strong> Keep these features
+              forever with your loyalty discount when we launch paid plans!
             </p>
-          </div>
-        </div>
-
-        {/* Account Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <CreditCard className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Account Details
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                User ID
-              </label>
-              <p className="text-gray-900 font-mono text-xs bg-gray-50 p-3 rounded break-all">
-                {user?.id}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Last Login
-              </label>
-              <p className="text-gray-900">
-                {user?.last_sign_in_at
-                  ? new Date(user.last_sign_in_at).toLocaleString()
-                  : "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Verified
-              </label>
-              <p className="text-gray-900">
-                {user?.email_confirmed_at ? (
-                  <span className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="w-4 h-4" /> Verified
-                  </span>
-                ) : (
-                  <span className="text-orange-600">Pending verification</span>
-                )}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Status
-              </label>
-              <p className="text-gray-900">
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                  Active
-                </span>
-              </p>
-            </div>
           </div>
         </div>
       </div>

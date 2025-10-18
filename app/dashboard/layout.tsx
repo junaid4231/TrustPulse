@@ -68,15 +68,16 @@ export default function DashboardLayout({
     else if (path.startsWith("/dashboard/analytics"))
       setActiveItem("analytics");
     else if (path.startsWith("/dashboard/settings")) setActiveItem("settings");
-    else if (path.startsWith("/dashboard/notifications"))
-      setActiveItem("notifications");
     else if (path.startsWith("/dashboard/help")) setActiveItem("help");
 
     // Responsive sidebar handling
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      setSidebarOpen(!mobile);
+      // Only auto-open sidebar on desktop
+      if (!mobile && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
     };
 
     checkMobile();
@@ -107,8 +108,8 @@ export default function DashboardLayout({
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
         {/* Mobile Header */}
-        <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between p-4">
+        <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm safe-top">
+          <div className="flex items-center justify-between p-4 pt-safe-top">
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSidebar}
@@ -138,7 +139,7 @@ export default function DashboardLayout({
 
         {/* Sidebar - FIXED VERSION */}
         <aside
-          className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -288,34 +289,38 @@ export default function DashboardLayout({
         {/* Main Content */}
         <main
           className={`transition-all duration-300 min-h-screen ${
-            sidebarOpen && !isMobile ? "lg:ml-72" : "lg:ml-0"
-          } ${isMobile ? "pt-16" : ""}`}
+            !isMobile && sidebarOpen ? "ml-72" : "ml-0"
+          }`}
         >
           {/* Desktop Sidebar Toggle */}
-          {!isMobile && (
-            <div className="fixed top-4 left-4 z-30">
-              <button
-                onClick={toggleSidebar}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${
-                  sidebarOpen
-                    ? "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                {sidebarOpen ? (
-                  <X className="w-4 h-4" />
-                ) : (
-                  <Menu className="w-4 h-4" />
-                )}
-                <span className="text-sm font-medium">
-                  {sidebarOpen ? "Hide" : "Menu"}
-                </span>
-              </button>
-            </div>
-          )}
+          <div
+            className={`fixed top-4 z-30 transition-all duration-300 ${
+              !isMobile && sidebarOpen ? "left-[288px]" : "left-4"
+            }`}
+          >
+            <button
+              onClick={toggleSidebar}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${
+                sidebarOpen
+                  ? "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {sidebarOpen ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Menu className="w-4 h-4" />
+              )}
+              <span className="text-sm font-medium">
+                {sidebarOpen ? "Hide" : "Menu"}
+              </span>
+            </button>
+          </div>
 
-          {/* Content Area */}
-          <div className="p-4 lg:p-8">{children}</div>
+          {/* Content Area - Mobile Safe Padding */}
+          <div className={`p-4 lg:p-8 ${isMobile ? "pt-20" : "pt-16"}`}>
+            {children}
+          </div>
         </main>
       </div>
     </ErrorBoundary>

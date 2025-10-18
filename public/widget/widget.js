@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  // Get the script tag - FIXED VERSION
+  // Get the script tag
   const currentScript =
     document.currentScript || document.querySelector("script[data-widget]");
   const widgetId = currentScript
@@ -25,7 +25,7 @@
     API_BASE_URL:
       window.location.hostname === "localhost"
         ? "http://localhost:3000"
-        : "https://proofpulse.vercel.app", // Make sure this is YOUR URL
+        : "https://proofpulse.vercel.app",
     NOTIFICATION_DURATION: 6000,
     NOTIFICATION_GAP: 2000,
     MAX_RETRIES: 3,
@@ -34,8 +34,6 @@
 
   console.log("[ProofPulse] Initialized with API:", CONFIG.API_BASE_URL);
   console.log("[ProofPulse] Widget ID to fetch:", widgetId);
-
-  // Rest of your code continues...
 
   // State
   let widgetData = null;
@@ -71,10 +69,8 @@
   }
 
   // Fetch widget data from API
-  // Fetch widget data from API
   async function fetchWidgetData() {
     try {
-      // MAKE SURE THIS LINE USES TEMPLATE LITERALS CORRECTLY:
       const url = `${CONFIG.API_BASE_URL}/api/widget/${widgetId}`;
       console.log("[ProofPulse] Fetching from:", url);
 
@@ -121,7 +117,6 @@
         }),
       });
     } catch (error) {
-      // Silent fail for analytics - don't break widget
       console.debug("[ProofPulse] Analytics tracking failed:", error);
     }
   }
@@ -155,127 +150,330 @@
     return name.substring(0, 2).toUpperCase();
   }
 
-  // Create notification element
+  // Create notification element with ENHANCED styling
   function createNotificationElement(notification, settings) {
     const notif = document.createElement("div");
     notif.className = "proofpulse-notification";
+
+    // ENHANCED STYLES - Clean white with subtle transparency
     notif.style.cssText = `
       position: fixed;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      padding: 16px;
-      max-width: 320px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 14px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 
+                  0 3px 12px rgba(0, 0, 0, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      padding: 14px 16px;
+      max-width: 340px;
+      min-width: 280px;
       z-index: 999999;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border-left: 4px solid ${settings.primary_color};
-      animation: slideIn 0.5s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      animation: proofpulse-slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), proofpulse-glow 2s ease-in-out infinite;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     `;
 
     // Position based on settings
     const position = settings.position || "bottom-right";
     if (position === "bottom-right") {
-      notif.style.bottom = "20px";
-      notif.style.right = "20px";
+      notif.style.bottom = "24px";
+      notif.style.right = "24px";
     } else if (position === "bottom-left") {
-      notif.style.bottom = "20px";
-      notif.style.left = "20px";
+      notif.style.bottom = "24px";
+      notif.style.left = "24px";
     } else if (position === "top-right") {
-      notif.style.top = "20px";
-      notif.style.right = "20px";
+      notif.style.top = "24px";
+      notif.style.right = "24px";
     }
 
-    // Add keyframe animation
+    // Add enhanced keyframe animations
     if (!document.getElementById("proofpulse-styles")) {
       const style = document.createElement("style");
       style.id = "proofpulse-styles";
       style.textContent = `
-        @keyframes slideIn {
-          from {
+        @keyframes proofpulse-slideIn {
+          0% {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px) scale(0.92);
           }
-          to {
+          60% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(-5px) scale(1.02);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
         }
-        .proofpulse-notification:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+        
+        @keyframes proofpulse-pulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 4px 12px ${adjustColor(
+              settings.primary_color || "#3B82F6",
+              0,
+              0.3
+            )};
+          }
+          50% {
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px ${adjustColor(
+              settings.primary_color || "#3B82F6",
+              0,
+              0.5
+            )};
+          }
         }
+
+        @keyframes proofpulse-glow {
+          0%, 100% {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 
+                        0 3px 12px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+          }
+          50% {
+            box-shadow: 0 12px 50px rgba(59, 130, 246, 0.25), 
+                        0 5px 20px rgba(59, 130, 246, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          }
+        }
+
+        @keyframes proofpulse-shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+
+        @keyframes proofpulse-float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-3px);
+          }
+        }
+        
+        .proofpulse-notification:hover {
+          transform: translateY(-6px) scale(1.03);
+          box-shadow: 0 16px 60px rgba(59, 130, 246, 0.3),
+                      0 8px 30px rgba(0, 0, 0, 0.15);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 255, 255, 0.98) 100%);
+          animation: proofpulse-float 1.5s ease-in-out infinite;
+        }
+
+        .proofpulse-notification::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            ${settings.primary_color || "#3B82F6"},
+            transparent
+          );
+          background-size: 200% 100%;
+          animation: proofpulse-shimmer 2.5s ease-in-out infinite;
+          border-radius: 14px 14px 0 0;
+          opacity: 0.8;
+        }
+        
+        .proofpulse-avatar {
+          animation: proofpulse-pulse 2.5s ease-in-out infinite;
+        }
+
+        /* Dark mode support - Light background */
+        @media (prefers-color-scheme: dark) {
+          .proofpulse-notification {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(250, 250, 250, 0.95) 100%) !important;
+            border: 1px solid rgba(220, 220, 220, 0.6);
+            box-shadow: 0 12px 45px rgba(0, 0, 0, 0.3),
+                        0 4px 15px rgba(0, 0, 0, 0.2);
+          }
+          .proofpulse-notification:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(252, 252, 252, 0.98) 100%) !important;
+            box-shadow: 0 18px 70px rgba(59, 130, 246, 0.35),
+                        0 8px 30px rgba(0, 0, 0, 0.25);
+          }
+        }
+        
+        /* Mobile responsive */
         @media (max-width: 640px) {
           .proofpulse-notification {
-            max-width: calc(100vw - 40px);
-            left: 20px !important;
-            right: 20px !important;
+            max-width: calc(100vw - 24px);
+            min-width: calc(100vw - 24px);
+            left: 12px !important;
+            right: 12px !important;
+            bottom: 12px !important;
+            padding: 12px 14px;
+          }
+        }
+
+        /* Smooth exit animation */
+        .proofpulse-notification.proofpulse-exit {
+          animation: proofpulse-slideOut 0.4s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+        }
+
+        @keyframes proofpulse-slideOut {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
           }
         }
       `;
       document.head.appendChild(style);
     }
 
-    // Content
+    // Content with enhanced styling
     const initials = getInitials(notification.name);
     const relativeTime = getRelativeTime(notification.timestamp);
+    const primaryColor = settings.primary_color || "#3B82F6";
 
     notif.innerHTML = `
-      <div style="display: flex; align-items: start; gap: 12px;">
-        <div style="
-          width: 40px;
-          height: 40px;
+      <div style="display: flex; align-items: start; gap: 14px;">
+        <div class="proofpulse-avatar" style="
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
-          background: ${settings.primary_color};
+          background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+      primaryColor,
+      -15
+    )} 100%);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: bold;
-          font-size: 14px;
+          font-weight: 700;
+          font-size: 15px;
           flex-shrink: 0;
+          box-shadow: 0 4px 16px ${adjustColor(primaryColor, 0, 0.35)};
+          border: 2.5px solid rgba(255, 255, 255, 0.9);
         ">
           ${initials}
         </div>
         <div style="flex: 1; min-width: 0;">
-          <p style="
+          <p class="proofpulse-name" style="
             margin: 0 0 4px 0;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 15px;
+            font-weight: 600;
             color: #1f2937;
-            line-height: 1.4;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
           ">
-            <strong style="font-weight: 600;">${notification.name}</strong>
-            ${notification.location ? ` from ${notification.location}` : ""}
+            ${notification.name}${
+      notification.location
+        ? `<span style="font-weight: 400; color: #6b7280;"> from ${notification.location}</span>`
+        : ""
+    }
           </p>
-          <p style="
-            margin: 0;
-            font-size: 13px;
-            color: #6b7280;
-            line-height: 1.4;
+          <p class="proofpulse-message" style="
+            margin: 0 0 6px 0;
+            font-size: 14px;
+            color: #4b5563;
+            line-height: 1.5;
+            font-weight: 400;
           ">
             ${notification.message}
           </p>
-          <p style="
-            margin: 4px 0 0 0;
-            font-size: 11px;
-            color: #9ca3af;
-          ">
-            ${relativeTime}
-          </p>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity: 0.5;">
+              <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6 3v3l2 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <p class="proofpulse-time" style="
+              margin: 0;
+              font-size: 12px;
+              color: #9ca3af;
+              font-weight: 500;
+            ">
+              ${relativeTime}
+            </p>
+          </div>
         </div>
       </div>
     `;
 
-    // Click handler
-    notif.addEventListener("click", () => {
+    // Enhanced click handler with ripple effect
+    notif.addEventListener("click", (e) => {
+      // Create ripple effect
+      const ripple = document.createElement("div");
+      const rect = notif.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = e.clientX - rect.left - size / 2;
+      const y = e.clientY - rect.top - size / 2;
+
+      ripple.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.6);
+        left: ${x}px;
+        top: ${y}px;
+        pointer-events: none;
+        animation: proofpulse-ripple 0.6s ease-out;
+      `;
+
+      if (!document.getElementById("proofpulse-ripple-style")) {
+        const rippleStyle = document.createElement("style");
+        rippleStyle.id = "proofpulse-ripple-style";
+        rippleStyle.textContent = `
+          @keyframes proofpulse-ripple {
+            0% {
+              transform: scale(0);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(2);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(rippleStyle);
+      }
+
+      notif.style.position = "relative";
+      notif.style.overflow = "hidden";
+      notif.appendChild(ripple);
+
+      setTimeout(() => ripple.remove(), 600);
+
       trackEvent("click", notification.id);
     });
 
     return notif;
   }
 
-  // Show notification
+  // Helper function to adjust color brightness
+  function adjustColor(color, percent, alpha = null) {
+    const num = parseInt(color.replace("#", ""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+    const G = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amt));
+    const B = Math.min(255, Math.max(0, (num & 0x0000ff) + amt));
+
+    if (alpha !== null) {
+      return `rgba(${R}, ${G}, ${B}, ${alpha})`;
+    }
+
+    return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B)
+      .toString(16)
+      .slice(1)}`;
+  }
+
+  // Show notification with enhanced animation
   function showNotification(notification, settings) {
     if (isShowing) return;
     isShowing = true;
@@ -286,17 +484,16 @@
     // Track impression
     trackEvent("impression", notification.id);
 
-    // Auto-hide after duration
+    // Auto-hide after duration with smooth exit animation
     setTimeout(() => {
-      notifElement.style.opacity = "0";
-      notifElement.style.transform = "translateY(20px)";
+      notifElement.classList.add("proofpulse-exit");
 
       setTimeout(() => {
         if (notifElement.parentNode) {
           notifElement.parentNode.removeChild(notifElement);
         }
         isShowing = false;
-      }, 300);
+      }, 400);
     }, CONFIG.NOTIFICATION_DURATION);
   }
 
