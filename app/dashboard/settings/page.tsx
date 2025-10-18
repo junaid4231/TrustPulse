@@ -556,7 +556,7 @@ export default function SettingsPage() {
                 Contact support for installation assistance.
               </p>
               <a
-                href="mailto:support@proofpulse.com"
+                href="mailto:proofpulse.official@gmail.com"
                 className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors"
               >
                 Contact Support
