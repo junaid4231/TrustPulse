@@ -10,6 +10,7 @@ import {
   MapPin,
   Send,
   CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 
 export default function ContactPage() {
@@ -21,22 +22,42 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Send to API route
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    setIsSubmitted(true);
-    setIsSubmitting(false);
+      const data = await response.json();
 
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 3000);
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send message");
+      }
+
+      setIsSubmitted(true);
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      }, 3000);
+    } catch (err: any) {
+      console.error("Form submission error:", err);
+      setError(err.message || "Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -96,8 +117,13 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                    <p className="text-gray-600">support@proofpulse.com</p>
-                    <p className="text-sm text-gray-500">
+                    <a
+                      href="mailto:proofpulse.official@gmail.com"
+                      className="text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      proofpulse.official@gmail.com
+                    </a>
+                    <p className="text-sm text-gray-500 mt-1">
                       We'll respond within 24 hours
                     </p>
                   </div>
@@ -114,7 +140,7 @@ export default function ContactPage() {
                     <p className="text-gray-600">
                       Available during business hours
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 mt-1">
                       Monday - Friday, 9 AM - 6 PM EST
                     </p>
                   </div>
@@ -126,8 +152,13 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
-                    <p className="text-gray-600">+1 (555) 123-4567</p>
-                    <p className="text-sm text-gray-500">
+                    <a
+                      href="tel:+15551234567"
+                      className="text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      +1 (555) 123-4567
+                    </a>
+                    <p className="text-sm text-gray-500 mt-1">
                       For urgent support issues
                     </p>
                   </div>
@@ -158,7 +189,8 @@ export default function ContactPage() {
                   </h3>
                   <p className="text-gray-600 text-sm">
                     Simply copy the widget code from your dashboard and paste it
-                    into your website's HTML.
+                    into your website's HTML before the closing &lt;/body&gt;
+                    tag.
                   </p>
                 </div>
                 <div>
@@ -167,7 +199,8 @@ export default function ContactPage() {
                   </h3>
                   <p className="text-gray-600 text-sm">
                     Yes! We're currently in beta and offering free access to all
-                    features.
+                    features. Beta testers get 50% lifetime discount when we
+                    launch!
                   </p>
                 </div>
                 <div>
@@ -176,13 +209,13 @@ export default function ContactPage() {
                   </h3>
                   <p className="text-gray-600 text-sm">
                     Absolutely! You can customize colors, position, timing, and
-                    content to match your brand.
+                    content to match your brand perfectly.
                   </p>
                 </div>
               </div>
               <Link
                 href="/faq"
-                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mt-4"
+                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mt-4 hover:underline"
               >
                 View all FAQs <ArrowLeft className="w-4 h-4 rotate-180" />
               </Link>
@@ -195,23 +228,35 @@ export default function ContactPage() {
               Send us a Message
             </h2>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-red-800 font-medium">Error</p>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                </div>
+              </div>
+            )}
+
             {isSubmitted ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Message Sent!
+                  Message Sent Successfully!
                 </h3>
                 <p className="text-gray-600">
-                  Thank you for contacting us. We'll get back to you soon.
+                  Thank you for contacting us. We'll get back to you within 24
+                  hours.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -219,14 +264,14 @@ export default function ContactPage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="John Doe"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
+                    Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -234,21 +279,21 @@ export default function ContactPage() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="john@example.com"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subject
+                    Subject <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="">Select a subject</option>
                     <option value="general">General Question</option>
@@ -263,7 +308,7 @@ export default function ContactPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Message
+                    Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="message"
@@ -271,15 +316,18 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
                     placeholder="Tell us how we can help you..."
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum 10 characters
+                  </p>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md"
                 >
                   {isSubmitting ? (
                     <>
@@ -293,11 +341,50 @@ export default function ContactPage() {
                     </>
                   )}
                 </button>
+
+                <p className="text-xs text-center text-gray-500 mt-4">
+                  By submitting this form, you agree to our{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Privacy Policy
+                  </Link>
+                </p>
               </form>
             )}
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="container mx-auto px-4 py-8 mt-12 border-t border-gray-200">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="text-gray-600 text-sm">
+            © 2025 ProofPulse. All rights reserved.
+          </div>
+          <div className="flex gap-6">
+            <Link
+              href="/privacy"
+              className="text-gray-600 hover:text-blue-600 text-sm"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-gray-600 hover:text-blue-600 text-sm"
+            >
+              Terms
+            </Link>
+            <Link
+              href="/contact"
+              className="text-gray-600 hover:text-blue-600 text-sm"
+            >
+              Contact
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
