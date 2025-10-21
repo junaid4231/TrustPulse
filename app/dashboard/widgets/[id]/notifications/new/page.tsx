@@ -106,6 +106,7 @@ export default function NewNotificationPage() {
     productName: "",
     purchaseTime: "2_min",
     purchaseEmoji: true,
+    purchaseClickUrl: "",
 
     // Review
     reviewName: "",
@@ -114,18 +115,21 @@ export default function NewNotificationPage() {
     reviewRating: 5,
     reviewTime: "2_min",
     reviewEmoji: true,
+    reviewClickUrl: "",
 
     // Live Activity
     visitorCount: 23,
     activityText: "viewing this page now",
     activityTime: "just_now",
     activityEmoji: true,
+    activityClickUrl: "",
 
     // Low Stock
     stockProduct: "",
     stockCount: 3,
     stockTime: "5_min",
     stockEmoji: true,
+    stockClickUrl: "",
 
     // Milestone
     milestoneName: "",
@@ -133,6 +137,7 @@ export default function NewNotificationPage() {
     milestoneNumber: "1,000th",
     milestoneTime: "10_min",
     milestoneEmoji: true,
+    milestoneClickUrl: "",
   });
 
   const updateField = (field: string, value: any) => {
@@ -169,6 +174,7 @@ export default function NewNotificationPage() {
             product_name: formData.productName,
             time_ago: formData.purchaseTime,
             use_emoji: formData.purchaseEmoji,
+            click_url: formData.purchaseClickUrl.trim() || null,
           };
           break;
         case "review":
@@ -180,6 +186,7 @@ export default function NewNotificationPage() {
             rating: formData.reviewRating,
             time_ago: formData.reviewTime,
             use_emoji: formData.reviewEmoji,
+            click_url: formData.reviewClickUrl.trim() || null,
           };
           break;
         case "live_activity":
@@ -189,6 +196,7 @@ export default function NewNotificationPage() {
             visitor_count: formData.visitorCount,
             time_ago: formData.activityTime,
             use_emoji: formData.activityEmoji,
+            click_url: formData.activityClickUrl.trim() || null,
           };
           break;
         case "low_stock":
@@ -199,6 +207,7 @@ export default function NewNotificationPage() {
             stock_count: formData.stockCount,
             time_ago: formData.stockTime,
             use_emoji: formData.stockEmoji,
+            click_url: formData.stockClickUrl.trim() || null,
           };
           break;
         case "milestone":
@@ -210,6 +219,7 @@ export default function NewNotificationPage() {
             milestone_text: formData.milestoneNumber,
             time_ago: formData.milestoneTime,
             use_emoji: formData.milestoneEmoji,
+            click_url: formData.milestoneClickUrl.trim() || null,
           };
           break;
       }
@@ -322,6 +332,20 @@ export default function NewNotificationPage() {
                         </select>
                       </div>
                     </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Click URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.purchaseClickUrl} 
+                        onChange={(e) => updateField("purchaseClickUrl", e.target.value)} 
+                        placeholder="/products/premium-plan or https://yoursite.com/product" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">💡 Where to redirect when notification is clicked (leave empty for non-clickable)</p>
+                    </div>
                     <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-200">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">🛒</span>
@@ -376,6 +400,20 @@ export default function NewNotificationPage() {
                         </select>
                       </div>
                     </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Click URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.reviewClickUrl} 
+                        onChange={(e) => updateField("reviewClickUrl", e.target.value)} 
+                        placeholder="/products/premium-plan or https://yoursite.com/product" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">💡 Where to redirect when notification is clicked (leave empty for non-clickable)</p>
+                    </div>
                     <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Use emoji</p>
@@ -411,6 +449,20 @@ export default function NewNotificationPage() {
                       <input type="text" value={formData.activityText} onChange={(e) => updateField("activityText", e.target.value)} placeholder="viewing this page now" required className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                       <p className="text-xs text-gray-500 mt-1">Examples: "viewing this page now", "are shopping right now", "signed up today"</p>
                     </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Click URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.activityClickUrl} 
+                        onChange={(e) => updateField("activityClickUrl", e.target.value)} 
+                        placeholder="/products/premium-plan or https://yoursite.com/product" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">💡 Where to redirect when notification is clicked (leave empty for non-clickable)</p>
+                    </div>
                     <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Use emoji</p>
@@ -445,6 +497,20 @@ export default function NewNotificationPage() {
                         ))}
                       </select>
                       <p className="text-xs text-gray-500 mt-1">Lower numbers (1-10) create stronger urgency</p>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Click URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.stockClickUrl} 
+                        onChange={(e) => updateField("stockClickUrl", e.target.value)} 
+                        placeholder="/products/premium-plan or https://yoursite.com/product" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">💡 Where to redirect when notification is clicked (leave empty for non-clickable)</p>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
                       <div>
@@ -486,6 +552,20 @@ export default function NewNotificationPage() {
                           ))}
                         </select>
                       </div>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Click URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.milestoneClickUrl} 
+                        onChange={(e) => updateField("milestoneClickUrl", e.target.value)} 
+                        placeholder="/products/premium-plan or https://yoursite.com/product" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">💡 Where to redirect when notification is clicked (leave empty for non-clickable)</p>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                       <div>

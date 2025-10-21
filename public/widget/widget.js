@@ -1048,6 +1048,80 @@
     // Track impression
     trackEvent("impression", notification.id);
 
+    // Make notification clickable if click_url is provided
+    if (notification.click_url) {
+      try {
+        // Add visual feedback for clickable notifications
+        notifElement.style.cursor = 'pointer';
+        notifElement.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+        
+        // Add hover effect
+        notifElement.addEventListener('mouseenter', () => {
+          notifElement.style.transform = 'translateY(-2px)';
+          notifElement.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.25)';
+        });
+        
+        notifElement.addEventListener('mouseleave', () => {
+          notifElement.style.transform = 'translateY(0)';
+          notifElement.style.boxShadow = ''; // Reset to default
+        });
+        
+        // Handle click
+        notifElement.addEventListener('click', (e) => {
+          try {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('[ProofPulse] Notification clicked, URL:', notification.click_url);
+            
+            // Track click event
+            trackEvent("click", notification.id);
+            
+            // Validate URL before redirecting
+            let targetUrl = notification.click_url.trim();
+            
+            // Handle relative URLs
+            if (targetUrl.startsWith('/')) {
+              targetUrl = window.location.origin + targetUrl;
+            }
+            
+            // Validate URL format
+            try {
+              new URL(targetUrl);
+            } catch (urlError) {
+              console.error('[ProofPulse] Invalid URL format:', targetUrl);
+              return;
+            }
+            
+            // Check if URL is safe (same origin or https)
+            const url = new URL(targetUrl);
+            const isSameOrigin = url.origin === window.location.origin;
+            const isHttps = url.protocol === 'https:';
+            const isHttp = url.protocol === 'http:';
+            
+            if (!isSameOrigin && !isHttps && !isHttp) {
+              console.warn('[ProofPulse] Blocked potentially unsafe URL:', targetUrl);
+              return;
+            }
+            
+            // Redirect to URL
+            console.log('[ProofPulse] Redirecting to:', targetUrl);
+            window.location.href = targetUrl;
+            
+          } catch (clickError) {
+            console.error('[ProofPulse] Click handler error:', clickError);
+          }
+        });
+        
+        if (CONFIG.DEBUG) {
+          console.log('[ProofPulse] Notification is clickable:', notification.click_url);
+        }
+      } catch (setupError) {
+        console.error('[ProofPulse] Error setting up clickable notification:', setupError);
+        // Continue without click functionality - non-breaking
+      }
+    }
+
     const start = Date.now();
     currentEndTime = start + CONFIG.NOTIFICATION_DURATION;
     remainingDuration = CONFIG.NOTIFICATION_DURATION;

@@ -305,6 +305,8 @@ export async function GET(
           milestone_text: notification.milestone_text,
           time_ago: notification.time_ago,
           use_emoji: notification.use_emoji,
+          // Click URL for clickable notifications
+          click_url: notification.click_url || null,
         };
       }),
       meta: {
