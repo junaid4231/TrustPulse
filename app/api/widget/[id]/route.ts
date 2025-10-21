@@ -284,6 +284,8 @@ export async function GET(
         device_targeting: widget.device_targeting || null,
         // URL targeting
         url_targeting: widget.url_targeting || null,
+        // Time-based rules
+        time_rules: widget.time_rules || null,
       },
       notifications: filtered.map((notification) => {
         console.log("[API] Raw notification from DB:", notification);

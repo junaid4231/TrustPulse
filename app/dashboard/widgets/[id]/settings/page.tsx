@@ -39,6 +39,12 @@ export default function WidgetSettingsPage() {
   // URL targeting
   const [urlTargeting, setUrlTargeting] = useState<string>("");
   
+  // Time-based rules
+  const [timeRulesEnabled, setTimeRulesEnabled] = useState<boolean>(false);
+  const [activeDays, setActiveDays] = useState<number[]>([]);
+  const [activeHoursStart, setActiveHoursStart] = useState<number>(9);
+  const [activeHoursEnd, setActiveHoursEnd] = useState<number>(17);
+  
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -48,7 +54,7 @@ export default function WidgetSettingsPage() {
       try {
         const { data } = await supabase
           .from("widgets")
-          .select("primary_color, radius, shadow, anim, duration, gap, start_delay, loop, shuffle, bg_color, bg_opacity, device_targeting, url_targeting")
+          .select("primary_color, radius, shadow, anim, duration, gap, start_delay, loop, shuffle, bg_color, bg_opacity, device_targeting, url_targeting, time_rules")
           .eq("id", widgetId)
           .single();
         if (data?.primary_color) setPrimaryColor(data.primary_color);
@@ -64,6 +70,14 @@ export default function WidgetSettingsPage() {
         if (data?.bg_opacity != null) setBgOpacity(data.bg_opacity);
         if (data?.device_targeting) setDeviceTargeting(data.device_targeting);
         if (data?.url_targeting) setUrlTargeting(data.url_targeting.join('\n'));
+        if (data?.time_rules) {
+          setTimeRulesEnabled(data.time_rules.enabled || false);
+          setActiveDays(data.time_rules.days || []);
+          if (data.time_rules.active_hours) {
+            setActiveHoursStart(data.time_rules.active_hours.start || 9);
+            setActiveHoursEnd(data.time_rules.active_hours.end || 17);
+          }
+        }
       } catch {}
     })();
   }, [widgetId]);
@@ -117,7 +131,15 @@ export default function WidgetSettingsPage() {
         bg_color: bgColor,
         bg_opacity: bgOpacity,
         device_targeting: deviceTargeting.length > 0 ? deviceTargeting : null,
-        url_targeting: urlTargeting.trim() ? urlTargeting.split('\n').map(s => s.trim()).filter(Boolean) : null
+        url_targeting: urlTargeting.trim() ? urlTargeting.split('\n').map(s => s.trim()).filter(Boolean) : null,
+        time_rules: timeRulesEnabled ? {
+          enabled: true,
+          days: activeDays.length > 0 ? activeDays : undefined,
+          active_hours: (activeHoursStart !== 9 || activeHoursEnd !== 17) ? {
+            start: activeHoursStart,
+            end: activeHoursEnd
+          } : undefined
+        } : null
       };
       console.log("💾 Full update data:", updateData);
       
@@ -654,6 +676,131 @@ export default function WidgetSettingsPage() {
                         : "✅ Widget will show on all pages"}
                     </p>
                   </div>
+                </div>
+
+                {/* Time-based Rules */}
+                <div className="mt-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Time-based Rules (Advanced)
+                    </label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={timeRulesEnabled}
+                        onChange={(e) => setTimeRulesEnabled(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Control when the widget shows based on time and day of week.
+                  </p>
+
+                  {timeRulesEnabled && (
+                    <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      {/* Days of Week */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Active Days
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { label: 'Sun', value: 0 },
+                            { label: 'Mon', value: 1 },
+                            { label: 'Tue', value: 2 },
+                            { label: 'Wed', value: 3 },
+                            { label: 'Thu', value: 4 },
+                            { label: 'Fri', value: 5 },
+                            { label: 'Sat', value: 6 }
+                          ].map((day) => (
+                            <button
+                              key={day.value}
+                              type="button"
+                              onClick={() => {
+                                if (activeDays.includes(day.value)) {
+                                  setActiveDays(activeDays.filter(d => d !== day.value));
+                                } else {
+                                  setActiveDays([...activeDays, day.value].sort());
+                                }
+                              }}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                activeDays.includes(day.value)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {day.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {activeDays.length === 0 
+                            ? "All days (leave empty for 24/7)" 
+                            : `Active on: ${activeDays.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')}`}
+                        </p>
+                      </div>
+
+                      {/* Active Hours */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Active Hours (24-hour format)
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Start Hour</label>
+                            <select
+                              value={activeHoursStart}
+                              onChange={(e) => setActiveHoursStart(Number(e.target.value))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <option key={i} value={i}>
+                                  {i.toString().padStart(2, '0')}:00
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">End Hour</label>
+                            <select
+                              value={activeHoursEnd}
+                              onChange={(e) => setActiveHoursEnd(Number(e.target.value))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <option key={i} value={i}>
+                                  {i.toString().padStart(2, '0')}:00
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Widget shows from {activeHoursStart.toString().padStart(2, '0')}:00 to {activeHoursEnd.toString().padStart(2, '0')}:00
+                        </p>
+                      </div>
+
+                      {/* Info Box */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-900 font-semibold mb-1">ℹ️ How it works:</p>
+                        <ul className="text-xs text-blue-800 space-y-1">
+                          <li>• Uses visitor's local time (browser timezone)</li>
+                          <li>• Leave days empty to show all week</li>
+                          <li>• Combine with URL targeting for precise control</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {!timeRulesEnabled && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-xs text-gray-600">
+                        ✅ Widget shows at all times (default)
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

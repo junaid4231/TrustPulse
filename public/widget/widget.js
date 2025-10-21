@@ -1092,22 +1092,34 @@
 
   // Notification loop
   function startNotificationLoop() {
+    console.log('[ProofPulse] startNotificationLoop called');
+    
     if (
       !widgetData ||
       !widgetData.notifications ||
       widgetData.notifications.length === 0
     ) {
+      console.warn('[ProofPulse] Cannot start loop - no widget data or notifications');
       return;
     }
 
+    // Reset state when starting loop
+    isShowing = false;
+    console.log(`[ProofPulse] Starting loop with ${widgetData.notifications.length} notifications, START_DELAY: ${CONFIG.START_DELAY}ms, isShowing reset to: ${isShowing}`);
+
     const showNext = () => {
+      console.log('[ProofPulse] showNext called, isShowing:', isShowing);
+      
       if (!isShowing) {
         if (!frequencyAvailable()) {
+          console.log('[ProofPulse] Frequency not available, waiting...');
           if (!CONFIG.LOOP) return;
           if (nextShowTimeout) clearTimeout(nextShowTimeout);
           nextShowTimeout = setTimeout(showNext, Math.max(CONFIG.COOLDOWN_MS, CONFIG.NOTIFICATION_GAP));
           return;
         }
+        
+        console.log('[ProofPulse] Frequency available, preparing to show notification');
         // Skip dismissed notifications if applicable
         let attempts = 0;
         while (
@@ -1127,8 +1139,13 @@
         if (!(CONFIG.DISMISS_TTL != null && attempts >= widgetData.notifications.length)) {
           if (!completedOneCycle) {
             const notification = widgetData.notifications[currentNotificationIndex];
+            console.log('[ProofPulse] Showing notification:', currentNotificationIndex, notification?.type);
             showNotification(notification, widgetData.widget);
+          } else {
+            console.log('[ProofPulse] Completed one cycle, not showing');
           }
+        } else {
+          console.log('[ProofPulse] All notifications dismissed');
         }
 
         const prevIndex = currentNotificationIndex;
@@ -1214,6 +1231,56 @@
         console.log(`[ProofPulse] ✅ Widget shown - URL targeting error (defaulting to show)`);
       }
 
+      // Check time-based rules (non-breaking - only if configured)
+      try {
+        if (widgetData.widget.time_rules && widgetData.widget.time_rules.enabled) {
+          const rules = widgetData.widget.time_rules;
+          const now = new Date();
+          
+          if (CONFIG.DEBUG) {
+            console.log(`[ProofPulse] Time rules configured:`, rules);
+            console.log(`[ProofPulse] Current time:`, now.toISOString());
+          }
+          
+          // Check day of week (0 = Sunday, 6 = Saturday)
+          if (rules.days && Array.isArray(rules.days) && rules.days.length > 0) {
+            const currentDay = now.getDay();
+            if (!rules.days.includes(currentDay)) {
+              console.log(`[ProofPulse] ❌ Widget hidden - Not in allowed days (current: ${currentDay}, allowed: ${rules.days.join(',')})`);
+              return;
+            }
+            if (CONFIG.DEBUG) {
+              console.log(`[ProofPulse] ✅ Day check passed (current: ${currentDay})`);
+            }
+          }
+          
+          // Check active hours
+          if (rules.active_hours && rules.active_hours.start !== undefined && rules.active_hours.end !== undefined) {
+            const currentHour = now.getHours();
+            const startHour = rules.active_hours.start;
+            const endHour = rules.active_hours.end;
+            
+            if (currentHour < startHour || currentHour >= endHour) {
+              console.log(`[ProofPulse] ❌ Widget hidden - Outside active hours (current: ${currentHour}, allowed: ${startHour}-${endHour})`);
+              return;
+            }
+            if (CONFIG.DEBUG) {
+              console.log(`[ProofPulse] ✅ Hour check passed (current: ${currentHour}, allowed: ${startHour}-${endHour})`);
+            }
+          }
+          
+          console.log(`[ProofPulse] ✅ Widget shown - Time rules passed`);
+        } else {
+          if (CONFIG.DEBUG) {
+            console.log(`[ProofPulse] ✅ Widget shown - no time rules configured (show at all times)`);
+          }
+        }
+      } catch (timeError) {
+        // On error, show widget (non-breaking)
+        console.error('[ProofPulse] Time rules error:', timeError);
+        console.log(`[ProofPulse] ✅ Widget shown - Time rules error (defaulting to show)`);
+      }
+
       // Apply widget-specific timing settings from database
       if (widgetData.widget.duration) CONFIG.NOTIFICATION_DURATION = widgetData.widget.duration * 1000;
       if (widgetData.widget.gap !== undefined) CONFIG.NOTIFICATION_GAP = widgetData.widget.gap * 1000;
@@ -1260,24 +1327,132 @@
       // Start showing notifications
       startNotificationLoop();
 
+      // Monitor URL changes for SPA navigation (Next.js, React Router, etc.)
+      let lastPath = window.location.pathname;
+      
+      const checkUrlAndToggleWidget = () => {
+        const currentPath = window.location.pathname;
+        
+        if (currentPath !== lastPath) {
+          lastPath = currentPath;
+          console.log(`[ProofPulse] URL changed to: ${currentPath}`);
+          
+          // Check if widget should be visible on new URL
+          if (widgetData.widget.url_targeting) {
+            const urlMatches = matchUrlPatterns(currentPath, widgetData.widget.url_targeting);
+            
+            if (!urlMatches) {
+              console.log(`[ProofPulse] ❌ Hiding widget - URL doesn't match targeting`);
+              // Hide widget
+              if (notificationContainer) {
+                notificationContainer.style.display = 'none';
+              }
+              // Clear any active notifications
+              if (nextShowTimeout) {
+                clearTimeout(nextShowTimeout);
+                nextShowTimeout = null;
+              }
+              const active = notificationContainer?.querySelector(".proofpulse-notification");
+              if (active) active.remove();
+            } else {
+              console.log(`[ProofPulse] ✅ Showing widget - URL matches targeting`);
+              // Show widget
+              if (notificationContainer) {
+                notificationContainer.style.display = 'block';
+                console.log(`[ProofPulse] Container display set to: block`);
+              } else {
+                console.warn(`[ProofPulse] ⚠️ Container not found!`);
+              }
+              
+              // Clear any existing notifications
+              const active = notificationContainer?.querySelector(".proofpulse-notification");
+              if (active) {
+                active.remove();
+                console.log(`[ProofPulse] Removed existing notification`);
+              }
+              
+              // Always restart notification loop when showing
+              if (nextShowTimeout) {
+                clearTimeout(nextShowTimeout);
+                nextShowTimeout = null;
+                console.log(`[ProofPulse] Cleared existing timeout`);
+              }
+              
+              console.log(`[ProofPulse] 🔄 Restarting notification loop...`);
+              console.log(`[ProofPulse] Available notifications: ${widgetData?.notifications?.length || 0}`);
+              
+              if (widgetData?.notifications?.length > 0) {
+                startNotificationLoop();
+              } else {
+                console.warn(`[ProofPulse] ⚠️ No notifications to show!`);
+              }
+            }
+          }
+        }
+      };
+      
+      // Listen for URL changes (works with pushState/replaceState)
+      const originalPushState = history.pushState;
+      const originalReplaceState = history.replaceState;
+      
+      history.pushState = function() {
+        originalPushState.apply(this, arguments);
+        checkUrlAndToggleWidget();
+      };
+      
+      history.replaceState = function() {
+        originalReplaceState.apply(this, arguments);
+        checkUrlAndToggleWidget();
+      };
+      
+      // Also listen for popstate (back/forward buttons)
+      window.addEventListener('popstate', checkUrlAndToggleWidget);
+      
+      // Also check periodically as a fallback (for frameworks that don't use history API)
+      setInterval(checkUrlAndToggleWidget, 1000);
+
       // Pause when page is hidden, resume when visible
       document.addEventListener("visibilitychange", () => {
         if (!notificationContainer) return;
+        
         if (document.hidden) {
-          // Pause current and next timers
+          // Pause: Clear timers when tab becomes hidden
+          console.log('[ProofPulse] Tab hidden - pausing notifications');
           const active = notificationContainer.querySelector(".proofpulse-notification");
           if (active) active.dispatchEvent(new Event("mouseenter"));
-          if (nextShowTimeout) clearTimeout(nextShowTimeout);
-        } else {
-          const active = notificationContainer.querySelector(".proofpulse-notification");
-          if (active) active.dispatchEvent(new Event("mouseleave"));
           if (nextShowTimeout) {
             clearTimeout(nextShowTimeout);
+            nextShowTimeout = null;
           }
-          nextShowTimeout = setTimeout(
-            () => {},
-            CONFIG.NOTIFICATION_GAP
-          );
+        } else {
+          // Resume: Restart notification loop when tab becomes visible
+          console.log('[ProofPulse] Tab visible - resuming notifications');
+          
+          // Check if we should show widget on current URL
+          if (widgetData?.widget?.url_targeting) {
+            const currentPath = window.location.pathname;
+            const urlMatches = matchUrlPatterns(currentPath, widgetData.widget.url_targeting);
+            
+            if (!urlMatches) {
+              console.log('[ProofPulse] Not resuming - URL does not match targeting');
+              return;
+            }
+          }
+          
+          // Clear any existing notification
+          const active = notificationContainer.querySelector(".proofpulse-notification");
+          if (active) active.remove();
+          
+          // Restart the notification loop
+          if (nextShowTimeout) {
+            clearTimeout(nextShowTimeout);
+            nextShowTimeout = null;
+          }
+          
+          if (widgetData?.notifications?.length > 0) {
+            console.log('[ProofPulse] Restarting notification loop after tab became visible');
+            startNotificationLoop();
+          }
         }
       });
 
