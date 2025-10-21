@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   Save,
   User,
-  Mail,
   Lock,
   Bell,
   Code,
@@ -693,3 +692,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

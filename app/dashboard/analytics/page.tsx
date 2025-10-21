@@ -36,9 +36,11 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 
   const loadAnalytics = async () => {
+    setLoading(true);
     try {
       const {
         data: { user },
@@ -63,13 +65,44 @@ export default function AnalyticsPage() {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysAgo);
 
-      // Load analytics
-      const { data: analyticsData } = await supabase
-        .from("analytics")
-        .select("*")
-        .in("widget_id", widgetIds)
-        .gte("created_at", startDate.toISOString())
-        .order("created_at", { ascending: true });
+      console.log("⏰ Time Range Changed:", {
+        timeRange,
+        daysAgo,
+        startDate: startDate.toISOString(),
+        today: new Date().toISOString()
+      });
+
+      // Load analytics - query each widget separately like widgets list page does
+      let allAnalyticsData: any[] = [];
+      
+      for (const widgetId of widgetIds) {
+        const { data: widgetAnalytics } = await supabase
+          .from("analytics")
+          .select("*")
+          .eq("widget_id", widgetId)
+          .gte("created_at", startDate.toISOString());
+        
+        if (widgetAnalytics) {
+          allAnalyticsData = [...allAnalyticsData, ...widgetAnalytics];
+        }
+      }
+
+      // Sort by created_at
+      allAnalyticsData.sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      console.log("📊 Analytics Query Result:", {
+        timeRange,
+        widgetIds,
+        startDate: startDate.toISOString(),
+        dataCount: allAnalyticsData.length,
+        sampleData: allAnalyticsData[0],
+        oldestRecord: allAnalyticsData[0]?.created_at,
+        newestRecord: allAnalyticsData[allAnalyticsData.length - 1]?.created_at
+      });
+
+      const analyticsData = allAnalyticsData;
 
       // Calculate overall stats
       const impressions =
@@ -139,6 +172,13 @@ export default function AnalyticsPage() {
   };
 
   const calculateWidgetPerformance = (analyticsData: any[], widgets: any[]) => {
+    console.log("Calculating widget performance:", {
+      totalAnalytics: analyticsData.length,
+      totalWidgets: widgets.length,
+      widgetIds: widgets.map(w => w.id),
+      analyticsWidgetIds: [...new Set(analyticsData.map(a => a.widget_id))]
+    });
+
     return widgets
       .map((widget) => {
         const widgetAnalytics = analyticsData.filter(
@@ -152,6 +192,13 @@ export default function AnalyticsPage() {
         ).length;
         const ctr =
           impressions > 0 ? ((clicks / impressions) * 100).toFixed(1) : "0.0";
+
+        console.log(`Widget ${widget.name}:`, {
+          id: widget.id,
+          matchedRecords: widgetAnalytics.length,
+          impressions,
+          clicks
+        });
 
         return {
           name: widget.name,
@@ -419,3 +466,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

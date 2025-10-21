@@ -60,18 +60,25 @@ export default function DashboardPage() {
       // Get widget IDs for analytics
       const widgetIds = widgetsData?.map((w) => w.id) || [];
 
-      // Load analytics data
+      // Load analytics data - query each widget separately
       if (widgetIds.length > 0) {
-        const { data: analyticsData } = await supabase
-          .from("analytics")
-          .select("event_type, created_at")
-          .in("widget_id", widgetIds);
+        let allAnalyticsData: any[] = [];
+        
+        for (const widgetId of widgetIds) {
+          const { data: widgetAnalytics } = await supabase
+            .from("analytics")
+            .select("event_type, created_at")
+            .eq("widget_id", widgetId);
+          
+          if (widgetAnalytics) {
+            allAnalyticsData = [...allAnalyticsData, ...widgetAnalytics];
+          }
+        }
 
         const impressions =
-          analyticsData?.filter((a) => a.event_type === "impression").length ||
-          0;
+          allAnalyticsData.filter((a) => a.event_type === "impression").length || 0;
         const clicks =
-          analyticsData?.filter((a) => a.event_type === "click").length || 0;
+          allAnalyticsData.filter((a) => a.event_type === "click").length || 0;
         const conversionRate =
           impressions > 0 ? ((clicks / impressions) * 100).toFixed(1) : 0;
 
@@ -436,3 +443,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

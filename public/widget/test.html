@@ -205,17 +205,14 @@
     IMPORTANT: Replace YOUR_WIDGET_ID_HERE with your actual widget ID!
     You can find this in your dashboard after creating a widget.
   -->
-    <script>
-      // Load widget script dynamically
-      (function () {
-        const script = document.createElement("script");
-        script.src = "widget.js";
-        script.setAttribute(
-          "data-widget",
-          "6582ad7e-f774-4405-a8d3-2bd0745853d9"
-        );
-        document.body.appendChild(script);
-      })();
-    </script>
+
+    <script
+      src="http://localhost:3000/widget/widget.js"
+      data-widget="e23aa8cb-5b75-4f1b-83e3-1eb7fbe63fad"
+      data-color="#F59E0B"
+      data-radius="32"
+      data-shadow="bold"
+      data-anim="subtle"
+    ></script>
   </body>
 </html>

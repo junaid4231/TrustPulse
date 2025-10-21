@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +45,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        
+        {/* ProofPulse Widget - Add ONCE, works on all pages */}
+        {/* Control visibility via dashboard (URL targeting, device targeting, etc.) */}
+        <Script
+          src="http://localhost:3000/widget/widget.js"
+          data-widget="e23aa8cb-5b75-4f1b-83e3-1eb7fbe63fad"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
