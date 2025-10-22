@@ -46,8 +46,7 @@ export default function RootLayout({
       >
         {children}
         
-        {/* ProofPulse Widget - Add ONCE, works on all pages */}
-        {/* Control visibility via dashboard (URL targeting, device targeting, etc.) */}
+        {/* ProofPulse Widget - For testing */}
         <Script
           src="http://localhost:3000/widget/widget.js"
           data-widget="e23aa8cb-5b75-4f1b-83e3-1eb7fbe63fad"

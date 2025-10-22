@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["impression", "click"].includes(event_type)) {
+    if (!["impression", "click", "scratch_complete", "code_copied"].includes(event_type)) {
       return NextResponse.json(
-        { error: "Invalid event_type. Must be 'impression' or 'click'" },
+        { error: "Invalid event_type. Must be 'impression', 'click', 'scratch_complete', or 'code_copied'" },
         { status: 400 }
       );
     }

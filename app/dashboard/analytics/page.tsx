@@ -30,6 +30,8 @@ export default function AnalyticsPage() {
     totalClicks: 0,
     conversionRate: 0,
     avgImpressions: 0,
+    totalScratches: 0,
+    totalCodeCopies: 0,
   });
   const [chartData, setChartData] = useState<any[]>([]);
   const [widgetPerformance, setWidgetPerformance] = useState<any[]>([]);
@@ -109,6 +111,10 @@ export default function AnalyticsPage() {
         analyticsData?.filter((a) => a.event_type === "impression").length || 0;
       const clicks =
         analyticsData?.filter((a) => a.event_type === "click").length || 0;
+      const scratches =
+        analyticsData?.filter((a) => a.event_type === "scratch_complete").length || 0;
+      const codeCopies =
+        analyticsData?.filter((a) => a.event_type === "code_copied").length || 0;
       const conversionRate = impressions > 0 ? (clicks / impressions) * 100 : 0;
       const avgImpressions = impressions / daysAgo;
 
@@ -117,6 +123,8 @@ export default function AnalyticsPage() {
         totalClicks: clicks,
         conversionRate: Number(conversionRate.toFixed(1)),
         avgImpressions: Number(avgImpressions.toFixed(0)),
+        totalScratches: scratches,
+        totalCodeCopies: codeCopies,
       });
 
       // Prepare chart data (group by day)
@@ -201,6 +209,7 @@ export default function AnalyticsPage() {
         });
 
         return {
+          id: widget.id,
           name: widget.name,
           domain: widget.domain,
           impressions,
@@ -266,7 +275,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <p className="text-blue-100">Total Impressions</p>
@@ -311,6 +320,41 @@ export default function AnalyticsPage() {
           <p className="text-sm text-orange-100 mt-2">Days of data</p>
         </div>
       </div>
+
+      {/* Scratch Card Stats - Only show if there's data */}
+      {(stats.totalScratches > 0 || stats.totalCodeCopies > 0) && (
+        <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl border-2 border-pink-200 p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="text-2xl">🎰</div>
+            <h2 className="text-xl font-bold text-gray-900">Scratch Card Performance</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white/80 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Scratches Completed</p>
+              <p className="text-3xl font-bold text-pink-600">{stats.totalScratches.toLocaleString()}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Codes Copied</p>
+              <p className="text-3xl font-bold text-purple-600">{stats.totalCodeCopies.toLocaleString()}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Scratch Rate</p>
+              <p className="text-3xl font-bold text-pink-600">
+                {stats.totalImpressions > 0 ? ((stats.totalScratches / stats.totalImpressions) * 100).toFixed(1) : 0}%
+              </p>
+              <p className="text-xs text-gray-500 mt-1">of impressions</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Copy Rate</p>
+              <p className="text-3xl font-bold text-purple-600">
+                {stats.totalScratches > 0 ? ((stats.totalCodeCopies / stats.totalScratches) * 100).toFixed(1) : 0}%
+              </p>
+              <p className="text-xs text-gray-500 mt-1">of scratches</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -426,6 +470,9 @@ export default function AnalyticsPage() {
                   <th className="text-center py-3 px-4 font-semibold text-gray-700">
                     CTR
                   </th>
+                  <th className="text-center py-3 px-4 font-semibold text-gray-700">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -448,6 +495,15 @@ export default function AnalyticsPage() {
                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                         {widget.ctr}%
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <a
+                        href={`/dashboard/widgets/${widget.id}/analytics`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        View Details
+                      </a>
                     </td>
                   </tr>
                 ))}

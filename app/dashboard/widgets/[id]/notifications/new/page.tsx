@@ -18,6 +18,7 @@ import {
   User,
   Package,
   MessageSquare,
+  Gift,
 } from "lucide-react";
 
 // 5 Notification Types for Market Differentiation
@@ -76,6 +77,17 @@ const NOTIFICATION_TYPES = [
     bgLight: "bg-green-50",
     description: "Celebrate achievements",
     example: '"Sarah is our 1,000th customer!"',
+  },
+  {
+    id: "reward",
+    name: "Scratch Card Reward",
+    icon: Gift,
+    color: "pink",
+    bgColor: "bg-pink-500",
+    borderColor: "border-pink-600",
+    bgLight: "bg-pink-50",
+    description: "Interactive gamification with rewards",
+    example: '"🎁 Scratch to reveal your discount!"',
   },
 ];
 
@@ -138,6 +150,13 @@ export default function NewNotificationPage() {
     milestoneTime: "10_min",
     milestoneEmoji: true,
     milestoneClickUrl: "",
+
+    // Reward/Scratch Card
+    rewardMessage: "🎁 Scratch to reveal your exclusive discount!",
+    rewardType: "discount_code",
+    rewardValue: "20% OFF",
+    rewardCode: "PROOF20",
+    rewardClickUrl: "",
   });
 
   const updateField = (field: string, value: any) => {
@@ -220,6 +239,18 @@ export default function NewNotificationPage() {
             time_ago: formData.milestoneTime,
             use_emoji: formData.milestoneEmoji,
             click_url: formData.milestoneClickUrl.trim() || null,
+          };
+          break;
+        case "reward":
+          notificationData = {
+            ...notificationData,
+            message: formData.rewardMessage,
+            reward_type: formData.rewardType,
+            reward_value: formData.rewardValue,
+            reward_code: formData.rewardCode,
+            click_url: formData.rewardClickUrl.trim() || null,
+            time_ago: null, // Rewards don't show time
+            use_emoji: false,
           };
           break;
       }
@@ -579,6 +610,108 @@ export default function NewNotificationPage() {
                     </div>
                   </>
                 )}
+
+                {/* REWARD/SCRATCH CARD FORM */}
+                {selectedType === "reward" && (
+                  <>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <MessageSquare className="w-4 h-4" />
+                        Scratch Card Message <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.rewardMessage} 
+                        onChange={(e) => updateField("rewardMessage", e.target.value)} 
+                        placeholder="🎁 Scratch to reveal your exclusive discount!" 
+                        required 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">This text appears before scratching</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                          <Gift className="w-4 h-4" />
+                          Reward Type <span className="text-red-500">*</span>
+                        </label>
+                        <select 
+                          value={formData.rewardType} 
+                          onChange={(e) => updateField("rewardType", e.target.value)} 
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        >
+                          <option value="discount_code">Discount Code</option>
+                          <option value="free_shipping">Free Shipping</option>
+                          <option value="gift">Free Gift</option>
+                          <option value="points">Loyalty Points</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                          <Package className="w-4 h-4" />
+                          Reward Value <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          value={formData.rewardValue} 
+                          onChange={(e) => updateField("rewardValue", e.target.value)} 
+                          placeholder="20% OFF" 
+                          required 
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent" 
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Display text (e.g., "20% OFF", "FREE")</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                        Discount Code <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.rewardCode} 
+                        onChange={(e) => updateField("rewardCode", e.target.value.toUpperCase())} 
+                        placeholder="PROOF20" 
+                        required 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent font-mono" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Code users will copy (auto-uppercase)</p>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        Redirect URL <span className="text-xs text-gray-500">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.rewardClickUrl} 
+                        onChange={(e) => updateField("rewardClickUrl", e.target.value)} 
+                        placeholder="/checkout or https://yoursite.com/shop" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent" 
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Where to send users after scratching (leave empty for no redirect)</p>
+                    </div>
+
+                    <div className="p-4 bg-pink-50 border border-pink-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">🎰</div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 mb-1">How Scratch Cards Work:</p>
+                          <ul className="text-xs text-gray-700 space-y-1">
+                            <li>✅ Visitors swipe/click to scratch and reveal the reward</li>
+                            <li>✅ Confetti animation on reveal for excitement</li>
+                            <li>✅ One-time per visitor (tracked via browser)</li>
+                            <li>✅ Copy-to-clipboard button for easy code copying</li>
+                            <li>✅ Tracks scratches and code copies in analytics</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -717,6 +850,30 @@ export default function NewNotificationPage() {
                               <p className="text-xs text-gray-600 mt-1">from {formData.milestoneLocation}</p>
                             )}
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* REWARD/SCRATCH CARD PREVIEW */}
+                    {selectedType === "reward" && (
+                      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                        <div className="text-center">
+                          <div className="text-4xl mb-3">🎁</div>
+                          <p className="text-base font-semibold text-gray-900 mb-4">
+                            {formData.rewardMessage || "🎁 Scratch to reveal your exclusive discount!"}
+                          </p>
+                          <div className="relative bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl p-8 mb-4 border-2 border-dashed border-gray-400">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-pink-600 mb-1">{formData.rewardValue || "20% OFF"}</p>
+                                <p className="text-xs text-gray-600">Code: <span className="font-mono font-bold">{formData.rewardCode || "PROOF20"}</span></p>
+                              </div>
+                            </div>
+                            <div className="relative z-10 opacity-50">
+                              <p className="text-gray-500 font-bold text-lg">SCRATCH HERE</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500">👆 Swipe to scratch (interactive on live site)</p>
                         </div>
                       </div>
                     )}

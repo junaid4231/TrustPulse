@@ -307,6 +307,13 @@ export async function GET(
           use_emoji: notification.use_emoji,
           // Click URL for clickable notifications
           click_url: notification.click_url || null,
+          // Reward/Gamification fields (optional)
+          reward_type: notification.reward_type || null,
+          reward_value: notification.reward_value || null,
+          reward_code: notification.reward_code || null,
+          reward_expiry: notification.reward_expiry || null,
+          reward_max_claims: notification.reward_max_claims || null,
+          reward_claimed_count: notification.reward_claimed_count || 0,
         };
       }),
       meta: {

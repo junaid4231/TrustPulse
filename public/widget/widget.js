@@ -905,6 +905,56 @@
             ${notification.location ? `<p style="margin:2px 0 0 0; font-size:12px; color:${textColorSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">from ${notification.location}</p>` : ""}
           </div>
         </div>`;
+    } else if (type === "reward" && notification.reward_type) {
+      // SCRATCH CARD REWARD NOTIFICATION
+      try {
+        const rewardValue = notification.reward_value || "REWARD";
+        const rewardCode = notification.reward_code || "";
+        const message = notification.message || "🎁 Scratch to reveal your exclusive discount!";
+        
+        // Check if already scratched (cookie-based)
+        const scratchedKey = `proofpulse_scratched_${notification.id}`;
+        const alreadyScratched = localStorage.getItem(scratchedKey);
+        
+        if (alreadyScratched) {
+          // Show revealed state immediately
+          contentHTML = `
+            <div style="text-align:center; padding:12px 8px;">
+              <div style="font-size:32px; margin-bottom:8px;">🎉</div>
+              <div style="font-size:18px; font-weight:700; color:${textColor}; margin-bottom:4px;">${rewardValue}</div>
+              <div style="font-size:14px; color:${textColorSecondary}; margin-bottom:12px;">Code: <strong style="color:${primaryColor};">${rewardCode}</strong></div>
+              <button class="proofpulse-copy-code" style="padding:8px 16px; background:${primaryColor}; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px; transition:all 0.2s;">
+                📋 Copy Code
+              </button>
+            </div>`;
+        } else {
+          // Show scratch card
+          contentHTML = `
+            <div style="text-align:center; padding:12px 8px;">
+              <div style="font-size:28px; margin-bottom:8px;">🎁</div>
+              <div style="font-size:15px; font-weight:600; color:${textColor}; margin-bottom:12px;">${message}</div>
+              <div class="proofpulse-scratch-container" style="position:relative; width:100%; height:120px; border-radius:12px; overflow:hidden; cursor:pointer; user-select:none;">
+                <div class="proofpulse-scratch-result" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg, ${primaryColor}15 0%, ${primaryColor}25 100%); border:2px dashed ${primaryColor}50; z-index:1;">
+                  <div style="font-size:24px; font-weight:700; color:${primaryColor}; margin-bottom:4px;">${rewardValue}</div>
+                  <div style="font-size:12px; color:${textColorSecondary};">Code: <strong>${rewardCode}</strong></div>
+                </div>
+                <canvas class="proofpulse-scratch-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; z-index:2;"></canvas>
+              </div>
+              <div style="font-size:11px; color:${textColorSecondary}; margin-top:8px;">👆 Swipe to scratch</div>
+              <button class="proofpulse-copy-code" style="display:none; padding:8px 16px; background:${primaryColor}; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px; transition:all 0.2s; margin-top:8px;">
+                📋 Copy Code
+              </button>
+            </div>`;
+        }
+      } catch (rewardError) {
+        console.error('[ProofPulse] Reward notification error:', rewardError);
+        // Fallback to simple message
+        contentHTML = `
+          <div style="text-align:center; padding:16px;">
+            <div style="font-size:24px; margin-bottom:8px;">🎁</div>
+            <div style="font-size:15px; font-weight:600; color:${textColor};">${notification.message || "Special reward available!"}</div>
+          </div>`;
+      }
     } else {
       // Fallback to generic
       contentHTML = `
@@ -1037,9 +1087,82 @@
       .slice(1)}`;
   }
 
+  // Confetti animation for scratch card reveal
+  function showConfetti(container) {
+    try {
+      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+      const confettiCount = 30;
+      
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.cssText = `
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          background: ${colors[Math.floor(Math.random() * colors.length)]};
+          border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+          left: ${50 + (Math.random() - 0.5) * 40}%;
+          top: ${50 + (Math.random() - 0.5) * 40}%;
+          pointer-events: none;
+          z-index: 1000;
+          animation: proofpulse-confetti ${0.8 + Math.random() * 0.4}s ease-out forwards;
+        `;
+        container.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 1200);
+      }
+      
+      // Add confetti animation if not exists
+      if (!document.getElementById('proofpulse-confetti-style')) {
+        const style = document.createElement('style');
+        style.id = 'proofpulse-confetti-style';
+        style.textContent = `
+          @keyframes proofpulse-confetti {
+            0% {
+              transform: translate(0, 0) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 + 100}px) rotate(${Math.random() * 720}deg);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    } catch (confettiError) {
+      console.error('[ProofPulse] Confetti error:', confettiError);
+    }
+  }
+
   // Show notification with enhanced animation + pause/resume support
   function showNotification(notification, settings) {
     if (isShowing) return;
+    
+    // Special handling for reward notifications: show until copied + one more time
+    if (notification.type === 'reward' && notification.reward_type) {
+      const scratchedKey = `proofpulse_scratched_${notification.id}`;
+      const copiedKey = `proofpulse_copied_${notification.id}`;
+      const shownAfterCopyKey = `proofpulse_shown_after_copy_${notification.id}`;
+      
+      const hasScratched = localStorage.getItem(scratchedKey);
+      const hasCopied = localStorage.getItem(copiedKey);
+      const hasShownAfterCopy = localStorage.getItem(shownAfterCopyKey);
+      
+      // If copied and already shown once after copying, skip this notification
+      if (hasCopied && hasShownAfterCopy) {
+        console.log('[ProofPulse] Reward already copied and shown once more, skipping');
+        isShowing = false;
+        return;
+      }
+      
+      // If copied but not yet shown after copy, mark it as shown
+      if (hasCopied && !hasShownAfterCopy) {
+        localStorage.setItem(shownAfterCopyKey, 'true');
+        console.log('[ProofPulse] Showing reward one final time after copy');
+      }
+    }
+    
     isShowing = true;
 
     const notifElement = createNotificationElement(notification, settings);
@@ -1119,6 +1242,221 @@
       } catch (setupError) {
         console.error('[ProofPulse] Error setting up clickable notification:', setupError);
         // Continue without click functionality - non-breaking
+      }
+    }
+
+    // Initialize scratch card if this is a reward notification
+    if (notification.type === 'reward' && notification.reward_type) {
+      try {
+        const scratchedKey = `proofpulse_scratched_${notification.id}`;
+        const alreadyScratched = localStorage.getItem(scratchedKey);
+        
+        if (!alreadyScratched) {
+          // Delay initialization to ensure DOM is fully rendered
+          setTimeout(() => {
+            const canvas = notifElement.querySelector('.proofpulse-scratch-canvas');
+            const container = notifElement.querySelector('.proofpulse-scratch-container');
+            
+            if (!canvas || !container) {
+              console.warn('[ProofPulse] Scratch card elements not found');
+              return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const rect = container.getBoundingClientRect();
+            
+            if (rect.width === 0 || rect.height === 0) {
+              console.warn('[ProofPulse] Container has no dimensions');
+              return;
+            }
+            
+            // Set canvas size
+            canvas.width = rect.width * 2; // 2x for retina
+            canvas.height = rect.height * 2;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.scale(2, 2);
+            
+            // Draw scratch-off overlay
+            const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+            gradient.addColorStop(0, '#C0C0C0');
+            gradient.addColorStop(0.5, '#E8E8E8');
+            gradient.addColorStop(1, '#C0C0C0');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, rect.width, rect.height);
+            
+            // Add texture pattern
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < rect.width; i += 4) {
+              for (let j = 0; j < rect.height; j += 4) {
+                if (Math.random() > 0.5) {
+                  ctx.fillRect(i, j, 2, 2);
+                }
+              }
+            }
+            
+            // Add text
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SCRATCH HERE', rect.width / 2, rect.height / 2);
+            
+            let isScratching = false;
+            let scratchedPercent = 0;
+            let hasTrackedComplete = false; // Prevent duplicate tracking
+            
+            const scratch = (x, y) => {
+              const canvasRect = canvas.getBoundingClientRect();
+              const scaleX = canvas.width / canvasRect.width;
+              const scaleY = canvas.height / canvasRect.height;
+              const scratchX = (x - canvasRect.left) * scaleX;
+              const scratchY = (y - canvasRect.top) * scaleY;
+              
+              ctx.globalCompositeOperation = 'destination-out';
+              ctx.beginPath();
+              ctx.arc(scratchX / 2, scratchY / 2, 20, 0, Math.PI * 2);
+              ctx.fill();
+            };
+            
+            const checkScratched = () => {
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const pixels = imageData.data;
+              let transparent = 0;
+              
+              for (let i = 3; i < pixels.length; i += 4) {
+                if (pixels[i] < 128) transparent++;
+              }
+              
+              scratchedPercent = (transparent / (pixels.length / 4)) * 100;
+              
+              if (scratchedPercent > 70 && !hasTrackedComplete) {
+                // Reveal!
+                hasTrackedComplete = true; // Mark as tracked
+                canvas.style.opacity = '0';
+                canvas.style.transition = 'opacity 0.3s';
+                localStorage.setItem(scratchedKey, 'true');
+                
+                // Show confetti and track ONCE
+                setTimeout(() => {
+                  showConfetti(container);
+                  trackEvent('scratch_complete', notification.id);
+                }, 300);
+                
+                // Enable copy button and add click listener
+                setTimeout(() => {
+                  const copyBtn = notifElement.querySelector('.proofpulse-copy-code');
+                  if (copyBtn) {
+                    copyBtn.style.display = 'inline-block';
+                    
+                    // Add click event listener
+                    copyBtn.addEventListener('click', (e) => {
+                      e.stopPropagation();
+                      const code = notification.reward_code;
+                      if (code && navigator.clipboard) {
+                        navigator.clipboard.writeText(code).then(() => {
+                          copyBtn.textContent = '✅ Copied!';
+                          setTimeout(() => {
+                            copyBtn.textContent = '📋 Copy Code';
+                          }, 2000);
+                          trackEvent('code_copied', notification.id);
+                          
+                          // Mark as copied for "show one more time" logic
+                          const copiedKey = `proofpulse_copied_${notification.id}`;
+                          localStorage.setItem(copiedKey, 'true');
+                        }).catch(err => {
+                          console.error('[ProofPulse] Copy failed:', err);
+                        });
+                      }
+                    });
+                  }
+                }, 600);
+              }
+            };
+            
+            // Mouse events
+            canvas.addEventListener('mousedown', (e) => {
+              isScratching = true;
+              scratch(e.clientX, e.clientY);
+              // Pause auto-hide while scratching
+              notifElement.dispatchEvent(new Event('mouseenter'));
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+              if (isScratching) {
+                scratch(e.clientX, e.clientY);
+                if (Math.random() > 0.7) checkScratched();
+              }
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+              isScratching = false;
+              checkScratched();
+              // Resume auto-hide after scratching
+              setTimeout(() => {
+                notifElement.dispatchEvent(new Event('mouseleave'));
+              }, 100);
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+              if (isScratching) {
+                isScratching = false;
+                checkScratched();
+              }
+            });
+            
+            // Touch events
+            canvas.addEventListener('touchstart', (e) => {
+              e.preventDefault();
+              isScratching = true;
+              const touch = e.touches[0];
+              scratch(touch.clientX, touch.clientY);
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+              e.preventDefault();
+              if (isScratching) {
+                const touch = e.touches[0];
+                scratch(touch.clientX, touch.clientY);
+                if (Math.random() > 0.7) checkScratched();
+              }
+            });
+            
+            canvas.addEventListener('touchend', () => {
+              isScratching = false;
+              checkScratched();
+            });
+            
+            console.log('[ProofPulse] Scratch card initialized');
+          }, 100); // Small delay to ensure DOM is ready
+        } else {
+          // Already scratched - setup copy button
+          const copyBtn = notifElement.querySelector('.proofpulse-copy-code');
+          if (copyBtn) {
+            copyBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const code = notification.reward_code;
+              if (code && navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                  copyBtn.textContent = '✅ Copied!';
+                  setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy Code';
+                  }, 2000);
+                  trackEvent('code_copied', notification.id);
+                  
+                  // Mark as copied for "show one more time" logic
+                  const copiedKey = `proofpulse_copied_${notification.id}`;
+                  localStorage.setItem(copiedKey, 'true');
+                }).catch(err => {
+                  console.error('[ProofPulse] Copy failed:', err);
+                });
+              }
+            });
+          }
+        }
+      } catch (scratchError) {
+        console.error('[ProofPulse] Scratch card initialization error:', scratchError);
+        // Continue without scratch functionality - non-breaking
       }
     }
 

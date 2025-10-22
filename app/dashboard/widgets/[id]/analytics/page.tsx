@@ -10,13 +10,16 @@ import {
   LineChart,
   Loader2,
   CalendarDays,
+  TrendingUp,
+  Eye,
+  MousePointerClick,
 } from "lucide-react";
 
 // Types from DB
 type AnalyticsRow = {
   id?: string;
   widget_id: string;
-  event_type: "impression" | "click";
+  event_type: "impression" | "click" | "scratch_complete" | "code_copied";
   notification_id: string | null;
   timestamp: string; // ISO
   url: string | null;
@@ -59,6 +62,8 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
+      console.log('[Analytics] Loading data for widget:', widgetId, 'from:', fromISO);
+      
       // Fetch analytics rows
       const { data: events, error: aerr } = await supabase
         .from("analytics")
@@ -66,9 +71,13 @@ export default function AnalyticsPage() {
         .eq("widget_id", widgetId)
         .gte("timestamp", fromISO)
         .order("timestamp", { ascending: true });
+      
+      console.log('[Analytics] Query result:', { events, error: aerr });
+      
       if (aerr) throw aerr;
 
       const analytics = (events as AnalyticsRow[]) || [];
+      console.log('[Analytics] Processed events:', analytics.length, 'events');
       setRows(analytics);
 
       // Fetch referenced notifications for display context
@@ -106,8 +115,12 @@ export default function AnalyticsPage() {
   const summary = useMemo(() => {
     const impressions = rows.filter((r) => r.event_type === "impression").length;
     const clicks = rows.filter((r) => r.event_type === "click").length;
+    const scratches = rows.filter((r) => r.event_type === "scratch_complete").length;
+    const codeCopies = rows.filter((r) => r.event_type === "code_copied").length;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-    return { impressions, clicks, ctr };
+    const scratchRate = impressions > 0 ? (scratches / impressions) * 100 : 0;
+    const copyRate = scratches > 0 ? (codeCopies / scratches) * 100 : 0;
+    return { impressions, clicks, ctr, scratches, codeCopies, scratchRate, copyRate };
   }, [rows]);
 
   const byDay = useMemo(() => {
@@ -174,42 +187,113 @@ export default function AnalyticsPage() {
   }, [rows]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-gray-950 py-8">
-      <div className="max-w-6xl mx-auto px-4 text-gray-900 dark:text-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href={`/dashboard/widgets/${widgetId}`}
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Widget
-          </Link>
-          <div className="flex items-center gap-2">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRangeKey(r.key as any)}
-                className={`px-3 py-2 rounded-lg border text-sm inline-flex items-center gap-2 ${rangeKey === r.key ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"}`}
-              >
-                <CalendarDays className="w-4 h-4" /> {r.label}
-              </button>
-            ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8">
+      <div className="max-w-7xl mx-auto px-4 text-gray-900">
+        {/* Back Button */}
+        <Link
+          href={`/dashboard/widgets/${widgetId}`}
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Widget
+        </Link>
+
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl shadow-2xl p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <BarChart3 className="w-10 h-10 text-white" />
+                <h1 className="text-4xl font-bold text-white">Analytics Dashboard</h1>
+              </div>
+              <p className="text-blue-100 text-lg">Track your widget performance and engagement metrics</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRangeKey(r.key as any)}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium inline-flex items-center gap-2 transition-all ${rangeKey === r.key ? "bg-white text-blue-600 shadow-lg" : "bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border border-white/20"}`}
+                >
+                  <CalendarDays className="w-4 h-4" /> {r.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div className="text-xs text-gray-500 mb-1">Impressions</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.impressions}</div>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div className="text-xs text-gray-500 mb-1">Clicks</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.clicks}</div>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div className="text-xs text-gray-500 mb-1">CTR</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.ctr.toFixed(2)}%</div>
+        {/* Key Metrics */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 text-blue-600" />
+            Key Performance Metrics
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-blue-100 text-sm font-medium">Total Impressions</div>
+                <Eye className="w-5 h-5 text-blue-100" />
+              </div>
+              <div className="text-4xl font-bold mb-1">{summary.impressions.toLocaleString()}</div>
+              <div className="text-blue-100 text-sm">Views of your notifications</div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-purple-100 text-sm font-medium">Total Clicks</div>
+                <MousePointerClick className="w-5 h-5 text-purple-100" />
+              </div>
+              <div className="text-4xl font-bold mb-1">{summary.clicks.toLocaleString()}</div>
+              <div className="text-purple-100 text-sm">User engagements</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-green-100 text-sm font-medium">Click-Through Rate</div>
+                <TrendingUp className="w-5 h-5 text-green-100" />
+              </div>
+              <div className="text-4xl font-bold mb-1">{summary.ctr.toFixed(2)}%</div>
+              <div className="text-green-100 text-sm">Conversion performance</div>
+            </div>
           </div>
         </div>
+
+        {/* Scratch Card Analytics */}
+        {summary.scratches > 0 && (
+          <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl border-2 border-pink-200 p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="text-2xl">🎰</div>
+              <h3 className="text-lg font-bold text-gray-900">Scratch Card Performance</h3>
+            </div>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="bg-white/80 rounded-lg p-4">
+                <div className="text-xs text-gray-500 mb-1">Scratches Completed</div>
+                <div className="text-2xl font-bold text-pink-600">{summary.scratches}</div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-4">
+                <div className="text-xs text-gray-500 mb-1">Codes Copied</div>
+                <div className="text-2xl font-bold text-purple-600">{summary.codeCopies}</div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-4">
+                <div className="text-xs text-gray-500 mb-1">Scratch Rate</div>
+                <div className="text-2xl font-bold text-pink-600">{summary.scratchRate.toFixed(2)}%</div>
+                <div className="text-xs text-gray-500 mt-1">of impressions</div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-4">
+                <div className="text-xs text-gray-500 mb-1">Copy Rate</div>
+                <div className="text-2xl font-bold text-purple-600">{summary.copyRate.toFixed(2)}%</div>
+                <div className="text-xs text-gray-500 mt-1">of scratches</div>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-white/60 rounded-lg">
+              <div className="text-sm text-gray-700">
+                <strong>💡 Insights:</strong>
+                {summary.scratchRate > 50 && " Amazing engagement! Over 50% of visitors are scratching."}
+                {summary.scratchRate > 30 && summary.scratchRate <= 50 && " Great engagement! Keep optimizing your rewards."}
+                {summary.scratchRate <= 30 && " Try different reward values or messaging to boost engagement."}
+                {summary.copyRate > 70 && " Excellent! Most scratchers are copying codes."}
+                {summary.copyRate <= 70 && summary.copyRate > 0 && " Consider making the code more visible or valuable."}
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16 text-gray-500">
@@ -217,10 +301,33 @@ export default function AnalyticsPage() {
           </div>
         ) : error ? (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">{error}</div>
+        ) : rows.length === 0 ? (
+          <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No Analytics Data Yet</h3>
+            <p className="text-gray-600 mb-4">
+              Your widget hasn't received any impressions or clicks yet.
+            </p>
+            <div className="text-sm text-gray-500 space-y-1">
+              <p>✅ Make sure your widget is installed on your website</p>
+              <p>✅ Check that the widget ID is correct</p>
+              <p>✅ Visit your website to generate test data</p>
+            </div>
+          </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold"><LineChart className="w-4 h-4" /> Trend (Impressions / Clicks)</div>
+          <>
+            {/* Detailed Analytics Section */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <LineChart className="w-6 h-6 text-purple-600" />
+                Detailed Analytics
+              </h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold text-lg">
+                    <LineChart className="w-5 h-5 text-blue-600" /> 
+                    Daily Trend
+                  </div>
               <div className="space-y-2">
                 {Object.entries(byDay).map(([day, v]) => (
                   <div key={day} className="flex items-center justify-between text-sm text-gray-700">
@@ -232,12 +339,15 @@ export default function AnalyticsPage() {
                     <div className="w-24 text-right text-purple-700">{v.clicks} clk</div>
                   </div>
                 ))}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold"><BarChart3 className="w-4 h-4" /> Top Notifications</div>
-              <div className="space-y-3">
+                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold text-lg">
+                    <BarChart3 className="w-5 h-5 text-purple-600" /> 
+                    Top Performing Notifications
+                  </div>
+                  <div className="space-y-3">
                 {byNotification.slice(0, 8).map((n) => {
                   const meta = n.id !== "unknown" ? notifs[n.id] : undefined;
                   const label = meta
@@ -251,6 +361,8 @@ export default function AnalyticsPage() {
                       ? `${meta.product_name || "Product"} low stock`
                       : meta.type === "milestone"
                       ? `${meta.name || "Customer"} milestone`
+                      : meta.type === "reward"
+                      ? `🎰 ${meta.message || "Scratch card reward"}`
                       : meta.message || "Notification"
                     : "(unknown)";
                   return (
@@ -266,11 +378,17 @@ export default function AnalyticsPage() {
                     </div>
                   );
                 })}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:col-span-2">
-              <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold"><BarChart3 className="w-4 h-4" /> Top Paths</div>
+            {/* Top Pages Section */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold text-lg">
+                <BarChart3 className="w-5 h-5 text-green-600" /> 
+                Top Pages
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -294,7 +412,7 @@ export default function AnalyticsPage() {
                 </table>
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
