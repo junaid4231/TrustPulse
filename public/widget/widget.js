@@ -23,16 +23,19 @@
   // Configuration
   // Check if script is loaded from localhost OR page is on localhost
   const scriptSrc = currentScript ? currentScript.src : "";
-  const isLocalScript = scriptSrc.includes("localhost") || scriptSrc.includes("127.0.0.1");
-  const isLocalPage = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  
+  const isLocalScript =
+    scriptSrc.includes("localhost") || scriptSrc.includes("127.0.0.1");
+  const isLocalPage =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+
   console.log("[ProofPulse] Script src:", scriptSrc);
   console.log("[ProofPulse] Is local script:", isLocalScript);
   console.log("[ProofPulse] Is local page:", isLocalPage);
-  
+
   const CONFIG = {
     API_BASE_URL:
-      (isLocalScript || isLocalPage)
+      isLocalScript || isLocalPage
         ? "http://localhost:3000"
         : "https://proofpulse.vercel.app",
     NOTIFICATION_DURATION: 6000,
@@ -62,11 +65,14 @@
   const ds = currentScript ? currentScript.dataset : {};
   if (ds.duration) {
     const d = parseInt(String(ds.duration), 10);
-    if (!isNaN(d) && d > 0) CONFIG.NOTIFICATION_DURATION = d * (String(ds.duration).endsWith("ms") ? 1 : 1000);
+    if (!isNaN(d) && d > 0)
+      CONFIG.NOTIFICATION_DURATION =
+        d * (String(ds.duration).endsWith("ms") ? 1 : 1000);
   }
   if (ds.gap) {
     const g = parseInt(String(ds.gap), 10);
-    if (!isNaN(g) && g >= 0) CONFIG.NOTIFICATION_GAP = g * (String(ds.gap).endsWith("ms") ? 1 : 1000);
+    if (!isNaN(g) && g >= 0)
+      CONFIG.NOTIFICATION_GAP = g * (String(ds.gap).endsWith("ms") ? 1 : 1000);
   }
   if (ds.startDelay) {
     const sd = String(ds.startDelay);
@@ -107,11 +113,15 @@
   function matchesPath() {
     const path = window.location.pathname;
     if (CONFIG.INCLUDE_PATHS && CONFIG.INCLUDE_PATHS.length) {
-      const ok = CONFIG.INCLUDE_PATHS.some((p) => wildcardToRegExp(p).test(path));
+      const ok = CONFIG.INCLUDE_PATHS.some((p) =>
+        wildcardToRegExp(p).test(path)
+      );
       if (!ok) return false;
     }
     if (CONFIG.EXCLUDE_PATHS && CONFIG.EXCLUDE_PATHS.length) {
-      const bad = CONFIG.EXCLUDE_PATHS.some((p) => wildcardToRegExp(p).test(path));
+      const bad = CONFIG.EXCLUDE_PATHS.some((p) =>
+        wildcardToRegExp(p).test(path)
+      );
       if (bad) return false;
     }
     return true;
@@ -119,7 +129,9 @@
 
   function matchesDevice() {
     if (!CONFIG.DEVICE) return true;
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent) || (window.innerWidth || 0) < 768;
+    const isMobile =
+      /Mobi|Android/i.test(navigator.userAgent) ||
+      (window.innerWidth || 0) < 768;
     return CONFIG.DEVICE === "mobile" ? isMobile : !isMobile;
   }
 
@@ -144,18 +156,29 @@
     }
   }
   function setSessionCount(n) {
-    try { sessionStorage.setItem(sessionKey("count"), String(n)); } catch (e) {}
+    try {
+      sessionStorage.setItem(sessionKey("count"), String(n));
+    } catch (e) {}
   }
   function getLastShownTs() {
-    try { const v = sessionStorage.getItem(sessionKey("last")); return v ? parseInt(v, 10) || 0 : 0; } catch (e) { return 0; }
+    try {
+      const v = sessionStorage.getItem(sessionKey("last"));
+      return v ? parseInt(v, 10) || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
   }
   function setLastShownTs(ts) {
-    try { sessionStorage.setItem(sessionKey("last"), String(ts)); } catch (e) {}
+    try {
+      sessionStorage.setItem(sessionKey("last"), String(ts));
+    } catch (e) {}
   }
   function frequencyAvailable() {
-    if (CONFIG.MAX_PER_PAGE != null && pageShownCount >= CONFIG.MAX_PER_PAGE) return false;
+    if (CONFIG.MAX_PER_PAGE != null && pageShownCount >= CONFIG.MAX_PER_PAGE)
+      return false;
     const sess = getSessionCount();
-    if (CONFIG.MAX_PER_SESSION != null && sess >= CONFIG.MAX_PER_SESSION) return false;
+    if (CONFIG.MAX_PER_SESSION != null && sess >= CONFIG.MAX_PER_SESSION)
+      return false;
     if (CONFIG.COOLDOWN_MS > 0) {
       const last = getLastShownTs();
       if (Date.now() - last < CONFIG.COOLDOWN_MS) return false;
@@ -186,7 +209,8 @@
     if (!isNaN(ttl)) {
       if (raw.endsWith("ms")) CONFIG.DISMISS_TTL = ttl;
       else if (raw.endsWith("m")) CONFIG.DISMISS_TTL = ttl * 60 * 1000;
-      else if (raw.endsWith("s") || !/[a-z]$/.test(raw)) CONFIG.DISMISS_TTL = ttl * 1000;
+      else if (raw.endsWith("s") || !/[a-z]$/.test(raw))
+        CONFIG.DISMISS_TTL = ttl * 1000;
     }
   }
   if (ds.maxPerPage) {
@@ -202,7 +226,8 @@
     let v = parseInt(raw, 10);
     if (!isNaN(v)) {
       if (raw.endsWith("ms")) CONFIG.COOLDOWN_MS = v;
-      else if (raw.endsWith("s") || !/[a-z]$/.test(raw)) CONFIG.COOLDOWN_MS = v * 1000;
+      else if (raw.endsWith("s") || !/[a-z]$/.test(raw))
+        CONFIG.COOLDOWN_MS = v * 1000;
     }
   }
   if (ds.includePath) {
@@ -255,10 +280,225 @@
   let paused = false;
   let completedOneCycle = false;
   let pageShownCount = 0;
+  
+  // Track which notifications have been shown for each trigger type (for rotation)
+  const shownNotificationsByTrigger = {};
+
+  // ============================================
+  // BEHAVIOR TRIGGERS SYSTEM
+  // ============================================
+  const behaviorTriggers = {
+    exitIntent: {
+      triggered: false,
+      lastTriggered: 0,
+      listeners: [],
+      init(callback, settings = {}) {
+        const sensitivity = settings.sensitivity || 'medium';
+        const thresholds = { low: 10, medium: 5, high: 2 };
+        const threshold = thresholds[sensitivity] || 5;
+        const minDelay = 1000; // Minimum 1 second between triggers to prevent spam
+        
+        const handler = (e) => {
+          // Desktop: mouse leaves from top
+          const now = Date.now();
+          const timeSinceLastTrigger = now - this.lastTriggered;
+          
+          if (e.clientY <= threshold && timeSinceLastTrigger >= minDelay) {
+            this.lastTriggered = now;
+            callback();
+            console.log('[ProofPulse] Exit intent triggered');
+          }
+        };
+        
+        document.addEventListener('mouseout', handler);
+        this.listeners.push({ event: 'mouseout', handler });
+      },
+      reset() {
+        this.triggered = false;
+        this.lastTriggered = 0;
+      }
+    },
+    
+    scrollDepth: {
+      triggered: {},
+      listeners: [],
+      init(callback, settings = {}) {
+        const percentage = settings.percentage || 50;
+        const direction = settings.direction || 'down';
+        const key = `${percentage}_${direction}`;
+        
+        if (this.triggered[key]) return;
+        
+        let maxScroll = 0;
+        
+        const handler = () => {
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const scrollPercent = (scrollTop / docHeight) * 100;
+          
+          if (direction === 'down') {
+            maxScroll = Math.max(maxScroll, scrollPercent);
+            if (maxScroll >= percentage && !this.triggered[key]) {
+              this.triggered[key] = true;
+              callback();
+              console.log(`[ProofPulse] Scroll depth triggered: ${percentage}%`);
+            }
+          } else if (direction === 'up') {
+            if (scrollPercent < maxScroll - 10 && scrollPercent <= percentage && !this.triggered[key]) {
+              this.triggered[key] = true;
+              callback();
+              console.log(`[ProofPulse] Scroll up triggered: ${percentage}%`);
+            }
+            maxScroll = scrollPercent;
+          }
+        };
+        
+        window.addEventListener('scroll', handler, { passive: true });
+        this.listeners.push({ event: 'scroll', handler });
+      },
+      reset() {
+        this.triggered = {};
+      }
+    },
+    
+    timeOnPage: {
+      triggered: {},
+      timers: [],
+      init(callback, settings = {}) {
+        const seconds = settings.seconds || 30;
+        const key = seconds;
+        
+        if (this.triggered[key]) return;
+        
+        const timer = setTimeout(() => {
+          if (!this.triggered[key]) {
+            this.triggered[key] = true;
+            callback();
+            console.log(`[ProofPulse] Time on page triggered: ${seconds}s`);
+          }
+        }, seconds * 1000);
+        
+        this.timers.push(timer);
+      },
+      reset() {
+        this.triggered = {};
+        this.timers.forEach(t => clearTimeout(t));
+        this.timers = [];
+      }
+    },
+    
+    inactivity: {
+      triggered: false,
+      timer: null,
+      listeners: [],
+      init(callback, settings = {}) {
+        if (this.triggered) return;
+        
+        const seconds = settings.seconds || 20;
+        let inactivityTimer = null;
+        
+        const resetTimer = () => {
+          if (inactivityTimer) clearTimeout(inactivityTimer);
+          if (this.triggered) return;
+          
+          inactivityTimer = setTimeout(() => {
+            if (!this.triggered) {
+              this.triggered = true;
+              callback();
+              console.log(`[ProofPulse] Inactivity triggered: ${seconds}s`);
+            }
+          }, seconds * 1000);
+        };
+        
+        const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+        events.forEach(event => {
+          const handler = resetTimer;
+          document.addEventListener(event, handler, { passive: true });
+          this.listeners.push({ event, handler });
+        });
+        
+        resetTimer(); // Start initial timer
+        this.timer = inactivityTimer;
+      },
+      reset() {
+        this.triggered = false;
+        if (this.timer) clearTimeout(this.timer);
+        this.timer = null;
+      }
+    },
+    
+    elementVisible: {
+      triggered: {},
+      observers: [],
+      init(callback, settings = {}) {
+        const selector = settings.selector;
+        const percentage = settings.percentage || 50;
+        const key = `${selector}_${percentage}`;
+        
+        if (!selector || this.triggered[key]) return;
+        
+        const element = document.querySelector(selector);
+        if (!element) {
+          console.warn(`[ProofPulse] Element not found: ${selector}`);
+          return;
+        }
+        
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            const visiblePercent = entry.intersectionRatio * 100;
+            if (visiblePercent >= percentage && !this.triggered[key]) {
+              this.triggered[key] = true;
+              callback();
+              console.log(`[ProofPulse] Element visible triggered: ${selector} (${visiblePercent.toFixed(0)}%)`);
+              observer.disconnect();
+            }
+          });
+        }, {
+          threshold: [0, 0.25, 0.5, 0.75, 1.0]
+        });
+        
+        observer.observe(element);
+        this.observers.push(observer);
+      },
+      reset() {
+        this.triggered = {};
+        this.observers.forEach(o => o.disconnect());
+        this.observers = [];
+      }
+    },
+    
+    // Cleanup all triggers
+    cleanup() {
+      this.exitIntent.listeners.forEach(({ event, handler }) => {
+        document.removeEventListener(event, handler);
+      });
+      this.scrollDepth.listeners.forEach(({ event, handler }) => {
+        window.removeEventListener(event, handler);
+      });
+      this.inactivity.listeners.forEach(({ event, handler }) => {
+        document.removeEventListener(event, handler);
+      });
+      this.elementVisible.observers.forEach(o => o.disconnect());
+      this.timeOnPage.timers.forEach(t => clearTimeout(t));
+      
+      if (this.inactivity.timer) clearTimeout(this.inactivity.timer);
+    },
+    
+    // Reset all triggers
+    resetAll() {
+      this.exitIntent.reset();
+      this.scrollDepth.reset();
+      this.timeOnPage.reset();
+      this.inactivity.reset();
+      this.elementVisible.reset();
+    }
+  };
 
   function getShadowValue() {
-    if (CONFIG.SHADOW === "minimal") return "0 6px 20px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)";
-    if (CONFIG.SHADOW === "bold") return "0 16px 60px rgba(0,0,0,0.20), 0 8px 30px rgba(0,0,0,0.12)";
+    if (CONFIG.SHADOW === "minimal")
+      return "0 6px 20px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)";
+    if (CONFIG.SHADOW === "bold")
+      return "0 16px 60px rgba(0,0,0,0.20), 0 8px 30px rgba(0,0,0,0.12)";
     return "0 10px 40px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1)";
   }
 
@@ -319,23 +559,33 @@
       // Send optional context (non-breaking; API may ignore)
       try {
         sp.set("ctx_path", window.location.pathname || "");
-        const isMobile = /Mobi|Android/i.test(navigator.userAgent) || (window.innerWidth || 0) < 768;
+        const isMobile =
+          /Mobi|Android/i.test(navigator.userAgent) ||
+          (window.innerWidth || 0) < 768;
         sp.set("ctx_device", isMobile ? "mobile" : "desktop");
         const qs = new URLSearchParams(window.location.search);
-        ["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].forEach((k)=>{
+        [
+          "utm_source",
+          "utm_medium",
+          "utm_campaign",
+          "utm_term",
+          "utm_content",
+        ].forEach((k) => {
           const v = qs.get(k);
           if (v) sp.set(k, v);
         });
 
-      // Cleanup on unload
-      window.addEventListener("beforeunload", () => {
-        try {
-          if (currentHideTimeout) clearTimeout(currentHideTimeout);
-          if (nextShowTimeout) clearTimeout(nextShowTimeout);
-        } catch (e) {}
-      });
+        // Cleanup on unload
+        window.addEventListener("beforeunload", () => {
+          try {
+            if (currentHideTimeout) clearTimeout(currentHideTimeout);
+            if (nextShowTimeout) clearTimeout(nextShowTimeout);
+          } catch (e) {}
+        });
       } catch (e) {}
-      const url = `${CONFIG.API_BASE_URL}/api/widget/${widgetId}` + (sp.toString() ? `?${sp.toString()}` : "");
+      const url =
+        `${CONFIG.API_BASE_URL}/api/widget/${widgetId}` +
+        (sp.toString() ? `?${sp.toString()}` : "");
       console.log("[ProofPulse] Fetching from:", url);
 
       const data = await fetchWithRetry(url, {
@@ -381,7 +631,8 @@
         }),
       });
     } catch (error) {
-      if (CONFIG.DEBUG) console.debug("[ProofPulse] Analytics tracking failed:", error);
+      if (CONFIG.DEBUG)
+        console.debug("[ProofPulse] Analytics tracking failed:", error);
     }
   }
 
@@ -420,7 +671,11 @@
     if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
       return "tablet";
     }
-    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+    if (
+      /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+        ua
+      )
+    ) {
       return "mobile";
     }
     return "desktop";
@@ -436,57 +691,63 @@
 
       // Normalize current path
       const normalizedPath = currentPath.toLowerCase().trim();
-      
+
       for (const pattern of patterns) {
         try {
           const rule = pattern.trim();
           if (!rule) continue;
 
           // Check if it's an exclude rule (starts with !)
-          const isExclude = rule.startsWith('!');
+          const isExclude = rule.startsWith("!");
           const cleanRule = isExclude ? rule.substring(1) : rule;
-          
+
           // Convert wildcard pattern to regex
           // * matches any characters, ** matches across path segments
           let regexPattern = cleanRule
-            .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-            .replace(/\*\*/g, '___DOUBLE___') // Temporarily replace **
-            .replace(/\*/g, '[^/]*') // * matches within segment
-            .replace(/___DOUBLE___/g, '.*'); // ** matches everything
-          
+            .replace(/[.+?^${}()|[\]\\]/g, "\\$&") // Escape special chars
+            .replace(/\*\*/g, "___DOUBLE___") // Temporarily replace **
+            .replace(/\*/g, "[^/]*") // * matches within segment
+            .replace(/___DOUBLE___/g, ".*"); // ** matches everything
+
           // Special case: if pattern ends with /*, also match without the trailing part
           // e.g., /products/* should match both /products and /products/item
-          if (cleanRule.endsWith('/*')) {
+          if (cleanRule.endsWith("/*")) {
             const basePath = cleanRule.slice(0, -2); // Remove /*
-            const basePattern = basePath.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+            const basePattern = basePath.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
             regexPattern = `(?:${basePattern}|${regexPattern})`;
           }
-          
-          const regex = new RegExp('^' + regexPattern + '$', 'i');
+
+          const regex = new RegExp("^" + regexPattern + "$", "i");
           const matches = regex.test(normalizedPath);
 
           // If exclude rule matches, hide widget
           if (isExclude && matches) {
-            if (CONFIG.DEBUG) console.log(`[ProofPulse] URL excluded by rule: ${rule}`);
+            if (CONFIG.DEBUG)
+              console.log(`[ProofPulse] URL excluded by rule: ${rule}`);
             return false;
           }
-          
+
           // If include rule matches, show widget
           if (!isExclude && matches) {
-            if (CONFIG.DEBUG) console.log(`[ProofPulse] URL matched by rule: ${rule}`);
+            if (CONFIG.DEBUG)
+              console.log(`[ProofPulse] URL matched by rule: ${rule}`);
             return true;
           }
         } catch (patternError) {
           // If individual pattern fails, log and continue
-          console.warn(`[ProofPulse] Invalid URL pattern: ${pattern}`, patternError);
+          console.warn(
+            `[ProofPulse] Invalid URL pattern: ${pattern}`,
+            patternError
+          );
           continue;
         }
       }
 
       // If we have include rules but none matched, hide widget
-      const hasIncludeRules = patterns.some(p => !p.trim().startsWith('!'));
+      const hasIncludeRules = patterns.some((p) => !p.trim().startsWith("!"));
       if (hasIncludeRules) {
-        if (CONFIG.DEBUG) console.log(`[ProofPulse] URL did not match any include rules`);
+        if (CONFIG.DEBUG)
+          console.log(`[ProofPulse] URL did not match any include rules`);
         return false;
       }
 
@@ -494,7 +755,7 @@
       return true;
     } catch (error) {
       // On any error, default to showing widget (non-breaking)
-      console.error('[ProofPulse] URL matching error:', error);
+      console.error("[ProofPulse] URL matching error:", error);
       return true;
     }
   }
@@ -552,19 +813,20 @@
     const slideIn = !prefersReducedMotion;
 
     // Get background settings
-    const bgColor = settings.bg_color || '#FFFFFF';
-    const bgOpacity = settings.bg_opacity !== undefined ? settings.bg_opacity : 100;
-    
+    const bgColor = settings.bg_color || "#FFFFFF";
+    const bgOpacity =
+      settings.bg_opacity !== undefined ? settings.bg_opacity : 100;
+
     if (CONFIG.DEBUG) {
       console.log("[ProofPulse] Background settings:", {
         bg_color: settings.bg_color,
         bg_opacity: settings.bg_opacity,
         bgColor: bgColor,
         bgOpacity: bgOpacity,
-        fullSettings: settings
+        fullSettings: settings,
       });
     }
-    
+
     // Convert hex to rgba with opacity
     const hexToRgba = (hex, opacity) => {
       const r = parseInt(hex.slice(1, 3), 16);
@@ -572,7 +834,7 @@
       const b = parseInt(hex.slice(5, 7), 16);
       return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
     };
-    
+
     // Smart contrast: Calculate if background is dark or light
     const isColorDark = (hex) => {
       const r = parseInt(hex.slice(1, 3), 16);
@@ -582,11 +844,13 @@
       const brightness = (r * 299 + g * 587 + b * 114) / 1000;
       return brightness < 128;
     };
-    
+
     // Auto-select text color based on background
-    const textColor = isColorDark(bgColor) && bgOpacity > 50 ? '#ffffff' : '#111827';
-    const textColorSecondary = isColorDark(bgColor) && bgOpacity > 50 ? '#e5e7eb' : '#6b7280';
-    
+    const textColor =
+      isColorDark(bgColor) && bgOpacity > 50 ? "#ffffff" : "#111827";
+    const textColorSecondary =
+      isColorDark(bgColor) && bgOpacity > 50 ? "#e5e7eb" : "#6b7280";
+
     const bgColorRgba = hexToRgba(bgColor, bgOpacity);
     const bgColorRgbaLight = hexToRgba(bgColor, Math.max(bgOpacity - 2, 0));
 
@@ -594,7 +858,7 @@
       console.log("[ProofPulse] Applying background:", {
         bgColorRgba: bgColorRgba,
         bgColorRgbaLight: bgColorRgbaLight,
-        willApply: `linear-gradient(135deg, ${bgColorRgba} 0%, ${bgColorRgbaLight} 100%)`
+        willApply: `linear-gradient(135deg, ${bgColorRgba} 0%, ${bgColorRgbaLight} 100%)`,
       });
     }
 
@@ -604,16 +868,22 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-radius: ${borderRadiusPx};
-      box-shadow: ${getShadowValue()}, inset 0 1px 0 rgba(255, 255, 255, ${bgOpacity / 100 * 0.8});
+      box-shadow: ${getShadowValue()}, inset 0 1px 0 rgba(255, 255, 255, ${
+      (bgOpacity / 100) * 0.8
+    });
       padding: 14px 16px;
       max-width: 340px;
       min-width: 280px;
       z-index: 999999;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, ${bgOpacity / 100 * 0.8});
+      border: 1px solid rgba(255, 255, 255, ${(bgOpacity / 100) * 0.8});
       overflow: hidden;
-      ${slideIn ? "animation: proofpulse-slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" : ""}${enableGlow ? ", proofpulse-glow 2s ease-in-out infinite" : ""};
+      ${
+        slideIn
+          ? "animation: proofpulse-slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)"
+          : ""
+      }${enableGlow ? ", proofpulse-glow 2s ease-in-out infinite" : ""};
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     `;
 
@@ -705,7 +975,11 @@
           box-shadow: 0 16px 60px rgba(59, 130, 246, 0.3),
                       0 8px 30px rgba(0, 0, 0, 0.15);
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 255, 255, 0.98) 100%);
-          ${enableFloat ? "animation: proofpulse-float 1.5s ease-in-out infinite;" : ""}
+          ${
+            enableFloat
+              ? "animation: proofpulse-float 1.5s ease-in-out infinite;"
+              : ""
+          }
         }
 
         .proofpulse-notification::before {
@@ -722,7 +996,11 @@
             transparent
           );
           background-size: 200% 100%;
-          ${enableGlow ? "animation: proofpulse-shimmer 2.5s ease-in-out infinite;" : ""}
+          ${
+            enableGlow
+              ? "animation: proofpulse-shimmer 2.5s ease-in-out infinite;"
+              : ""
+          }
           border-radius: ${borderRadiusPx} ${borderRadiusPx} 0 0;
           opacity: 0.4;
           overflow: hidden;
@@ -780,16 +1058,21 @@
 
     // Content with enhanced styling
     const initials = getInitials(notification.name || "");
-    
+
     // Debug time_ago
     if (CONFIG.DEBUG) {
       console.log("[ProofPulse] Notification time_ago:", notification.time_ago);
-      console.log("[ProofPulse] Notification timestamp:", notification.timestamp);
+      console.log(
+        "[ProofPulse] Notification timestamp:",
+        notification.timestamp
+      );
     }
-    
+
     const relativeTime = notification.time_ago
       ? mapTimeAgo(notification.time_ago)
-      : (notification.timestamp ? getRelativeTime(notification.timestamp) : "just now");
+      : notification.timestamp
+      ? getRelativeTime(notification.timestamp)
+      : "just now";
     const primaryColor = settings.primary_color || "#3B82F6";
 
     // Per-type content rendering
@@ -806,7 +1089,10 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%);
+            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+        primaryColor,
+        -15
+      )} 100%);
             color: white;
             display: flex;
             align-items: center;
@@ -821,9 +1107,15 @@
           </div>
           <div style=\"flex: 1; min-width: 0; overflow: hidden;\">
             <p class=\"proofpulse-name\" style=\"margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: ${textColor}; line-height: 1.5; letter-spacing: -0.01em; word-wrap: break-word; overflow-wrap: break-word;\">
-              ${notification.name || ""}${notification.location ? `<span style=\"font-weight: 400; color: ${textColorSecondary};\"> from ${notification.location}</span>` : ""}
+              ${notification.name || ""}${
+        notification.location
+          ? `<span style=\"font-weight: 400; color: ${textColorSecondary};\"> from ${notification.location}</span>`
+          : ""
+      }
             </p>
-            <p class=\"proofpulse-message\" style=\"margin: 0; font-size: 14px; color: ${textColorSecondary}; line-height: 1.5; font-weight: 400; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;\">${emoji}${notification.message || `purchased ${product}`}</p>
+            <p class=\"proofpulse-message\" style=\"margin: 0; font-size: 14px; color: ${textColorSecondary}; line-height: 1.5; font-weight: 400; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;\">${emoji}${
+        notification.message || `purchased ${product}`
+      }</p>
           </div>
         </div>`;
     } else if (type === "review") {
@@ -840,14 +1132,27 @@
         <div style="display: flex; align-items: start; gap: 14px;">
           <div class="proofpulse-avatar" style="
             width: 44px; height: 44px; border-radius: 50%;
-            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%);
-            color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; box-shadow: 0 4px 16px ${adjustColor(primaryColor, 0, 0.35)}; border: 2.5px solid rgba(255,255,255,0.9);
+            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+        primaryColor,
+        -15
+      )} 100%);
+            color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; box-shadow: 0 4px 16px ${adjustColor(
+              primaryColor,
+              0,
+              0.35
+            )}; border: 2.5px solid rgba(255,255,255,0.9);
           ">${initials}</div>
           <div style="flex:1; min-width:0; overflow:hidden;">
             <div style="display:flex; align-items:center; gap:2px; margin-bottom:6px; font-size:18px; line-height:1;">${starsHTML}</div>
-            <p class="proofpulse-message" style="margin: 0 0 6px 0; font-size: 14px; color: ${textColor}; line-height: 1.6; font-style: italic; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${notification.use_emoji ? "⭐ " : ""}"${notification.message || ""}"</p>
+            <p class="proofpulse-message" style="margin: 0 0 6px 0; font-size: 14px; color: ${textColor}; line-height: 1.6; font-style: italic; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${
+        notification.use_emoji ? "⭐ " : ""
+      }"${notification.message || ""}"</p>
             <p class="proofpulse-name" style="margin:0; font-size:13px; font-weight:600; color:${textColor}; word-wrap: break-word; overflow-wrap: break-word;">
-              ${notification.name || ""}${notification.location ? `<span style="font-weight:400; color:${textColorSecondary};">, ${notification.location}</span>` : ""}
+              ${notification.name || ""}${
+        notification.location
+          ? `<span style="font-weight:400; color:${textColorSecondary};">, ${notification.location}</span>`
+          : ""
+      }
             </p>
           </div>
         </div>`;
@@ -855,7 +1160,14 @@
       const message = notification.message || "people viewing now";
       contentHTML = `
         <div style="display:flex; align-items:center; gap:14px;">
-          <div class="proofpulse-avatar" style="width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%); color:white; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 16px ${adjustColor(primaryColor, 0, 0.35)}; border:2.5px solid rgba(255,255,255,0.9); flex-shrink:0;">
+          <div class="proofpulse-avatar" style="width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+        primaryColor,
+        -15
+      )} 100%); color:white; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 16px ${adjustColor(
+        primaryColor,
+        0,
+        0.35
+      )}; border:2.5px solid rgba(255,255,255,0.9); flex-shrink:0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle cx="12" cy="12" r="3"></circle>
@@ -878,19 +1190,35 @@
             </svg>
           </div>
           <div style="flex:1; min-width:0; overflow:hidden;">
-            <p style="margin:0; font-size:14px; font-weight:700; color:${textColor}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">Only ${formatNumber(stock)} left in stock!</p>
-            ${product ? `<p style="margin:2px 0 0 0; font-size:13px; color:${textColorSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${product}</p>` : ""}
+            <p style="margin:0; font-size:14px; font-weight:700; color:${textColor}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">Only ${formatNumber(
+        stock
+      )} left in stock!</p>
+            ${
+              product
+                ? `<p style="margin:2px 0 0 0; font-size:13px; color:${textColorSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${product}</p>`
+                : ""
+            }
           </div>
         </div>`;
     } else if (type === "milestone") {
       const milestoneText = notification.milestone_text || "";
       if (CONFIG.DEBUG) {
         console.log("[ProofPulse] Milestone notification:", notification);
-        console.log("[ProofPulse] milestone_text:", notification.milestone_text);
+        console.log(
+          "[ProofPulse] milestone_text:",
+          notification.milestone_text
+        );
       }
       contentHTML = `
         <div style="display:flex; align-items:start; gap:14px;">
-          <div class="proofpulse-avatar" style="width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%); color:white; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 16px ${adjustColor(primaryColor, 0, 0.35)}; border:2.5px solid rgba(255,255,255,0.9); flex-shrink:0;">
+          <div class="proofpulse-avatar" style="width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+        primaryColor,
+        -15
+      )} 100%); color:white; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 16px ${adjustColor(
+        primaryColor,
+        0,
+        0.35
+      )}; border:2.5px solid rgba(255,255,255,0.9); flex-shrink:0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
               <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
@@ -901,8 +1229,14 @@
             </svg>
           </div>
           <div style="flex:1; min-width:0; overflow:hidden;">
-            <p style="margin:0; font-size:14px; font-weight:700; color:${textColor}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${notification.name || ""} is our ${milestoneText} customer!</p>
-            ${notification.location ? `<p style="margin:2px 0 0 0; font-size:12px; color:${textColorSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">from ${notification.location}</p>` : ""}
+            <p style="margin:0; font-size:14px; font-weight:700; color:${textColor}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${
+        notification.name || ""
+      } is our ${milestoneText} customer!</p>
+            ${
+              notification.location
+                ? `<p style="margin:2px 0 0 0; font-size:12px; color:${textColorSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">from ${notification.location}</p>`
+                : ""
+            }
           </div>
         </div>`;
     } else if (type === "reward" && notification.reward_type) {
@@ -910,12 +1244,14 @@
       try {
         const rewardValue = notification.reward_value || "REWARD";
         const rewardCode = notification.reward_code || "";
-        const message = notification.message || "🎁 Scratch to reveal your exclusive discount!";
-        
+        const message =
+          notification.message ||
+          "🎁 Scratch to reveal your exclusive discount!";
+
         // Check if already scratched (cookie-based)
         const scratchedKey = `proofpulse_scratched_${notification.id}`;
         const alreadyScratched = localStorage.getItem(scratchedKey);
-        
+
         if (alreadyScratched) {
           // Show revealed state immediately
           contentHTML = `
@@ -947,12 +1283,14 @@
             </div>`;
         }
       } catch (rewardError) {
-        console.error('[ProofPulse] Reward notification error:', rewardError);
+        console.error("[ProofPulse] Reward notification error:", rewardError);
         // Fallback to simple message
         contentHTML = `
           <div style="text-align:center; padding:16px;">
             <div style="font-size:24px; margin-bottom:8px;">🎁</div>
-            <div style="font-size:15px; font-weight:600; color:${textColor};">${notification.message || "Special reward available!"}</div>
+            <div style="font-size:15px; font-weight:600; color:${textColor};">${
+          notification.message || "Special reward available!"
+        }</div>
           </div>`;
       }
     } else {
@@ -961,15 +1299,28 @@
         <div style="display: flex; align-items: start; gap: 14px;">
           <div class="proofpulse-avatar" style="
             width: 44px; height: 44px; border-radius: 50%;
-            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%);
+            background: linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+        primaryColor,
+        -15
+      )} 100%);
             color: white; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 15px; flex-shrink: 0; box-shadow: 0 4px 16px ${adjustColor(primaryColor, 0, 0.35)}; border: 2.5px solid rgba(255, 255, 255, 0.9);
+            font-weight: 700; font-size: 15px; flex-shrink: 0; box-shadow: 0 4px 16px ${adjustColor(
+              primaryColor,
+              0,
+              0.35
+            )}; border: 2.5px solid rgba(255, 255, 255, 0.9);
           ">${initials}</div>
           <div style="flex: 1; min-width: 0; overflow: hidden;">
             <p class="proofpulse-name" style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: ${textColor}; line-height: 1.5; letter-spacing: -0.01em; word-wrap: break-word; overflow-wrap: break-word;">
-              ${notification.name || ""}${notification.location ? `<span style="font-weight: 400; color: ${textColorSecondary};"> from ${notification.location}</span>` : ""}
+              ${notification.name || ""}${
+        notification.location
+          ? `<span style="font-weight: 400; color: ${textColorSecondary};"> from ${notification.location}</span>`
+          : ""
+      }
             </p>
-            <p class="proofpulse-message" style="margin: 0 0 6px 0; font-size: 14px; color: ${textColorSecondary}; line-height: 1.5; font-weight: 400; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${notification.message || ""}</p>
+            <p class="proofpulse-message" style="margin: 0 0 6px 0; font-size: 14px; color: ${textColorSecondary}; line-height: 1.5; font-weight: 400; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${
+        notification.message || ""
+      }</p>
           </div>
         </div>`;
     }
@@ -979,20 +1330,45 @@
 
     // A11y label per notification
     let ariaLabel = "Notification";
-    if (type === "purchase") ariaLabel = `${notification.name || "Someone"} just purchased ${notification.product_name || "a product"}`;
-    else if (type === "review") ariaLabel = `${notification.name || "Customer"} left a ${Number(notification.rating)||0} star review`;
-    else if (type === "live_activity") ariaLabel = `${formatNumber(Number(notification.visitor_count)||0)} people ${notification.message?.replace(/^[0-9]+\s+people\s+/, "") || "active"}`;
-    else if (type === "low_stock") ariaLabel = `Only ${formatNumber(Number(notification.stock_count)||0)} left in stock`;
-    else if (type === "milestone") ariaLabel = `${notification.name || "Customer"} is our ${notification.milestone_text || "milestone"} customer`;
+    if (type === "purchase")
+      ariaLabel = `${notification.name || "Someone"} just purchased ${
+        notification.product_name || "a product"
+      }`;
+    else if (type === "review")
+      ariaLabel = `${notification.name || "Customer"} left a ${
+        Number(notification.rating) || 0
+      } star review`;
+    else if (type === "live_activity")
+      ariaLabel = `${formatNumber(
+        Number(notification.visitor_count) || 0
+      )} people ${
+        notification.message?.replace(/^[0-9]+\s+people\s+/, "") || "active"
+      }`;
+    else if (type === "low_stock")
+      ariaLabel = `Only ${formatNumber(
+        Number(notification.stock_count) || 0
+      )} left in stock`;
+    else if (type === "milestone")
+      ariaLabel = `${notification.name || "Customer"} is our ${
+        notification.milestone_text || "milestone"
+      } customer`;
     notif.setAttribute("aria-label", ariaLabel);
 
     notif.innerHTML = `
       <div style="position: relative; z-index: 1;">
         ${contentHTML}
-        ${canDismiss ? `<button class="proofpulse-dismiss" aria-label="Dismiss" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border:none;background:rgba(0,0,0,0.04);border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${textColorSecondary};z-index:10;">×</button>` : ""}
-        <div style="display: ${relativeTime ? "flex" : "none"}; align-items: center; gap: 6px; margin-top: 8px;">
+        ${
+          canDismiss
+            ? `<button class="proofpulse-dismiss" aria-label="Dismiss" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border:none;background:rgba(0,0,0,0.04);border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${textColorSecondary};z-index:10;">×</button>`
+            : ""
+        }
+        <div style="display: ${
+          relativeTime ? "flex" : "none"
+        }; align-items: center; gap: 6px; margin-top: 8px;">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity: 0.5;"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 3v3l2 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <p class="proofpulse-time" style="margin: 0; font-size: 12px; color: ${textColorSecondary}; font-weight: 500;">${relativeTime || ""}</p>
+          <p class="proofpulse-time" style="margin: 0; font-size: 12px; color: ${textColorSecondary}; font-weight: 500;">${
+      relativeTime || ""
+    }</p>
         </div>
       </div>`;
 
@@ -1000,7 +1376,7 @@
     notif.addEventListener("click", (e) => {
       // Don't trigger if clicking dismiss button
       if (e.target.closest(".proofpulse-dismiss")) return;
-      
+
       // Create subtle ripple effect
       const ripple = document.createElement("div");
       const rect = notif.getBoundingClientRect();
@@ -1090,32 +1466,41 @@
   // Confetti animation for scratch card reveal
   function showConfetti(container) {
     try {
-      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+      const colors = [
+        "#FF6B6B",
+        "#4ECDC4",
+        "#45B7D1",
+        "#FFA07A",
+        "#98D8C8",
+        "#F7DC6F",
+      ];
       const confettiCount = 30;
-      
+
       for (let i = 0; i < confettiCount; i++) {
-        const confetti = document.createElement('div');
+        const confetti = document.createElement("div");
         confetti.style.cssText = `
           position: absolute;
           width: 8px;
           height: 8px;
           background: ${colors[Math.floor(Math.random() * colors.length)]};
-          border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+          border-radius: ${Math.random() > 0.5 ? "50%" : "2px"};
           left: ${50 + (Math.random() - 0.5) * 40}%;
           top: ${50 + (Math.random() - 0.5) * 40}%;
           pointer-events: none;
           z-index: 1000;
-          animation: proofpulse-confetti ${0.8 + Math.random() * 0.4}s ease-out forwards;
+          animation: proofpulse-confetti ${
+            0.8 + Math.random() * 0.4
+          }s ease-out forwards;
         `;
         container.appendChild(confetti);
-        
+
         setTimeout(() => confetti.remove(), 1200);
       }
-      
+
       // Add confetti animation if not exists
-      if (!document.getElementById('proofpulse-confetti-style')) {
-        const style = document.createElement('style');
-        style.id = 'proofpulse-confetti-style';
+      if (!document.getElementById("proofpulse-confetti-style")) {
+        const style = document.createElement("style");
+        style.id = "proofpulse-confetti-style";
         style.textContent = `
           @keyframes proofpulse-confetti {
             0% {
@@ -1123,7 +1508,9 @@
               opacity: 1;
             }
             100% {
-              transform: translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 + 100}px) rotate(${Math.random() * 720}deg);
+              transform: translate(${Math.random() * 200 - 100}px, ${
+          Math.random() * 200 + 100
+        }px) rotate(${Math.random() * 720}deg);
               opacity: 0;
             }
           }
@@ -1131,38 +1518,40 @@
         document.head.appendChild(style);
       }
     } catch (confettiError) {
-      console.error('[ProofPulse] Confetti error:', confettiError);
+      console.error("[ProofPulse] Confetti error:", confettiError);
     }
   }
 
   // Show notification with enhanced animation + pause/resume support
   function showNotification(notification, settings) {
     if (isShowing) return;
-    
+
     // Special handling for reward notifications: show until copied + one more time
-    if (notification.type === 'reward' && notification.reward_type) {
+    if (notification.type === "reward" && notification.reward_type) {
       const scratchedKey = `proofpulse_scratched_${notification.id}`;
       const copiedKey = `proofpulse_copied_${notification.id}`;
       const shownAfterCopyKey = `proofpulse_shown_after_copy_${notification.id}`;
-      
+
       const hasScratched = localStorage.getItem(scratchedKey);
       const hasCopied = localStorage.getItem(copiedKey);
       const hasShownAfterCopy = localStorage.getItem(shownAfterCopyKey);
-      
+
       // If copied and already shown once after copying, skip this notification
       if (hasCopied && hasShownAfterCopy) {
-        console.log('[ProofPulse] Reward already copied and shown once more, skipping');
+        console.log(
+          "[ProofPulse] Reward already copied and shown once more, skipping"
+        );
         isShowing = false;
         return;
       }
-      
+
       // If copied but not yet shown after copy, mark it as shown
       if (hasCopied && !hasShownAfterCopy) {
-        localStorage.setItem(shownAfterCopyKey, 'true');
-        console.log('[ProofPulse] Showing reward one final time after copy');
+        localStorage.setItem(shownAfterCopyKey, "true");
+        console.log("[ProofPulse] Showing reward one final time after copy");
       }
     }
-    
+
     isShowing = true;
 
     const notifElement = createNotificationElement(notification, settings);
@@ -1175,118 +1564,139 @@
     if (notification.click_url) {
       try {
         // Add visual feedback for clickable notifications
-        notifElement.style.cursor = 'pointer';
-        notifElement.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-        
+        notifElement.style.cursor = "pointer";
+        notifElement.style.transition =
+          "transform 0.2s ease, box-shadow 0.2s ease";
+
         // Add hover effect
-        notifElement.addEventListener('mouseenter', () => {
-          notifElement.style.transform = 'translateY(-2px)';
-          notifElement.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.25)';
+        notifElement.addEventListener("mouseenter", () => {
+          notifElement.style.transform = "translateY(-2px)";
+          notifElement.style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.25)";
         });
-        
-        notifElement.addEventListener('mouseleave', () => {
-          notifElement.style.transform = 'translateY(0)';
-          notifElement.style.boxShadow = ''; // Reset to default
+
+        notifElement.addEventListener("mouseleave", () => {
+          notifElement.style.transform = "translateY(0)";
+          notifElement.style.boxShadow = ""; // Reset to default
         });
-        
+
         // Handle click
-        notifElement.addEventListener('click', (e) => {
+        notifElement.addEventListener("click", (e) => {
           try {
             e.preventDefault();
             e.stopPropagation();
-            
-            console.log('[ProofPulse] Notification clicked, URL:', notification.click_url);
-            
+
+            console.log(
+              "[ProofPulse] Notification clicked, URL:",
+              notification.click_url
+            );
+
             // Track click event
             trackEvent("click", notification.id);
-            
+
             // Validate URL before redirecting
             let targetUrl = notification.click_url.trim();
-            
+
             // Handle relative URLs
-            if (targetUrl.startsWith('/')) {
+            if (targetUrl.startsWith("/")) {
               targetUrl = window.location.origin + targetUrl;
             }
-            
+
             // Validate URL format
             try {
               new URL(targetUrl);
             } catch (urlError) {
-              console.error('[ProofPulse] Invalid URL format:', targetUrl);
+              console.error("[ProofPulse] Invalid URL format:", targetUrl);
               return;
             }
-            
+
             // Check if URL is safe (same origin or https)
             const url = new URL(targetUrl);
             const isSameOrigin = url.origin === window.location.origin;
-            const isHttps = url.protocol === 'https:';
-            const isHttp = url.protocol === 'http:';
-            
+            const isHttps = url.protocol === "https:";
+            const isHttp = url.protocol === "http:";
+
             if (!isSameOrigin && !isHttps && !isHttp) {
-              console.warn('[ProofPulse] Blocked potentially unsafe URL:', targetUrl);
+              console.warn(
+                "[ProofPulse] Blocked potentially unsafe URL:",
+                targetUrl
+              );
               return;
             }
-            
+
             // Redirect to URL
-            console.log('[ProofPulse] Redirecting to:', targetUrl);
+            console.log("[ProofPulse] Redirecting to:", targetUrl);
             window.location.href = targetUrl;
-            
           } catch (clickError) {
-            console.error('[ProofPulse] Click handler error:', clickError);
+            console.error("[ProofPulse] Click handler error:", clickError);
           }
         });
-        
+
         if (CONFIG.DEBUG) {
-          console.log('[ProofPulse] Notification is clickable:', notification.click_url);
+          console.log(
+            "[ProofPulse] Notification is clickable:",
+            notification.click_url
+          );
         }
       } catch (setupError) {
-        console.error('[ProofPulse] Error setting up clickable notification:', setupError);
+        console.error(
+          "[ProofPulse] Error setting up clickable notification:",
+          setupError
+        );
         // Continue without click functionality - non-breaking
       }
     }
 
     // Initialize scratch card if this is a reward notification
-    if (notification.type === 'reward' && notification.reward_type) {
+    if (notification.type === "reward" && notification.reward_type) {
       try {
         const scratchedKey = `proofpulse_scratched_${notification.id}`;
         const alreadyScratched = localStorage.getItem(scratchedKey);
-        
+
         if (!alreadyScratched) {
           // Delay initialization to ensure DOM is fully rendered
           setTimeout(() => {
-            const canvas = notifElement.querySelector('.proofpulse-scratch-canvas');
-            const container = notifElement.querySelector('.proofpulse-scratch-container');
-            
+            const canvas = notifElement.querySelector(
+              ".proofpulse-scratch-canvas"
+            );
+            const container = notifElement.querySelector(
+              ".proofpulse-scratch-container"
+            );
+
             if (!canvas || !container) {
-              console.warn('[ProofPulse] Scratch card elements not found');
+              console.warn("[ProofPulse] Scratch card elements not found");
               return;
             }
-            
-            const ctx = canvas.getContext('2d');
+
+            const ctx = canvas.getContext("2d");
             const rect = container.getBoundingClientRect();
-            
+
             if (rect.width === 0 || rect.height === 0) {
-              console.warn('[ProofPulse] Container has no dimensions');
+              console.warn("[ProofPulse] Container has no dimensions");
               return;
             }
-            
+
             // Set canvas size
             canvas.width = rect.width * 2; // 2x for retina
             canvas.height = rect.height * 2;
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
+            canvas.style.width = rect.width + "px";
+            canvas.style.height = rect.height + "px";
             ctx.scale(2, 2);
-            
+
             // Draw scratch-off overlay
-            const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-            gradient.addColorStop(0, '#C0C0C0');
-            gradient.addColorStop(0.5, '#E8E8E8');
-            gradient.addColorStop(1, '#C0C0C0');
+            const gradient = ctx.createLinearGradient(
+              0,
+              0,
+              rect.width,
+              rect.height
+            );
+            gradient.addColorStop(0, "#C0C0C0");
+            gradient.addColorStop(0.5, "#E8E8E8");
+            gradient.addColorStop(1, "#C0C0C0");
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, rect.width, rect.height);
-            
+
             // Add texture pattern
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
             for (let i = 0; i < rect.width; i += 4) {
               for (let j = 0; j < rect.height; j += 4) {
                 if (Math.random() > 0.5) {
@@ -1294,126 +1704,171 @@
                 }
               }
             }
-            
+
             // Add text
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('SCRATCH HERE', rect.width / 2, rect.height / 2);
-            
+            ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("SCRATCH HERE", rect.width / 2, rect.height / 2);
+
             let isScratching = false;
             let scratchedPercent = 0;
             let hasTrackedComplete = false; // Prevent duplicate tracking
-            
+
             const scratch = (x, y) => {
               const canvasRect = canvas.getBoundingClientRect();
               const scaleX = canvas.width / canvasRect.width;
               const scaleY = canvas.height / canvasRect.height;
               const scratchX = (x - canvasRect.left) * scaleX;
               const scratchY = (y - canvasRect.top) * scaleY;
-              
-              ctx.globalCompositeOperation = 'destination-out';
+
+              ctx.globalCompositeOperation = "destination-out";
               ctx.beginPath();
               ctx.arc(scratchX / 2, scratchY / 2, 20, 0, Math.PI * 2);
               ctx.fill();
             };
-            
+
             const checkScratched = () => {
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const imageData = ctx.getImageData(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+              );
               const pixels = imageData.data;
               let transparent = 0;
-              
+
               for (let i = 3; i < pixels.length; i += 4) {
                 if (pixels[i] < 128) transparent++;
               }
-              
+
               scratchedPercent = (transparent / (pixels.length / 4)) * 100;
-              
+
               if (scratchedPercent > 70 && !hasTrackedComplete) {
                 // Reveal!
                 hasTrackedComplete = true; // Mark as tracked
-                canvas.style.opacity = '0';
-                canvas.style.transition = 'opacity 0.3s';
-                localStorage.setItem(scratchedKey, 'true');
-                
+                canvas.style.opacity = "0";
+                canvas.style.transition = "opacity 0.3s";
+                localStorage.setItem(scratchedKey, "true");
+
+                // Clear any existing hide timeout
+                if (currentHideTimeout) {
+                  clearTimeout(currentHideTimeout);
+                  currentHideTimeout = null;
+                }
+
+                // Start NEW 10-second timer after scratch completes
+                currentHideTimeout = setTimeout(() => {
+                  const copiedKey = `proofpulse_copied_${notification.id}`;
+                  const hasCopied = localStorage.getItem(copiedKey);
+                  if (!hasCopied) {
+                    // User didn't copy - hide notification
+                    notifElement.classList.add("proofpulse-exit");
+                    setTimeout(() => {
+                      if (notifElement.parentNode) {
+                        notifElement.parentNode.removeChild(notifElement);
+                      }
+                      isShowing = false;
+                    }, 400);
+                  }
+                }, 10000); // 10 seconds
+
                 // Show confetti and track ONCE
                 setTimeout(() => {
                   showConfetti(container);
-                  trackEvent('scratch_complete', notification.id);
+                  trackEvent("scratch_complete", notification.id);
                 }, 300);
-                
+
                 // Enable copy button and add click listener
                 setTimeout(() => {
-                  const copyBtn = notifElement.querySelector('.proofpulse-copy-code');
+                  const copyBtn = notifElement.querySelector(
+                    ".proofpulse-copy-code"
+                  );
                   if (copyBtn) {
-                    copyBtn.style.display = 'inline-block';
-                    
+                    copyBtn.style.display = "inline-block";
+
                     // Add click event listener
-                    copyBtn.addEventListener('click', (e) => {
+                    copyBtn.addEventListener("click", (e) => {
                       e.stopPropagation();
                       const code = notification.reward_code;
                       if (code && navigator.clipboard) {
-                        navigator.clipboard.writeText(code).then(() => {
-                          copyBtn.textContent = '✅ Copied!';
-                          setTimeout(() => {
-                            copyBtn.textContent = '📋 Copy Code';
-                          }, 2000);
-                          trackEvent('code_copied', notification.id);
-                          
-                          // Mark as copied for "show one more time" logic
-                          const copiedKey = `proofpulse_copied_${notification.id}`;
-                          localStorage.setItem(copiedKey, 'true');
-                        }).catch(err => {
-                          console.error('[ProofPulse] Copy failed:', err);
-                        });
+                        navigator.clipboard
+                          .writeText(code)
+                          .then(() => {
+                            copyBtn.textContent = "✅ Copied!";
+                            setTimeout(() => {
+                              copyBtn.textContent = "📋 Copy Code";
+                            }, 2000);
+                            trackEvent("code_copied", notification.id);
+
+                            // Mark as copied for "show one more time" logic
+                            const copiedKey = `proofpulse_copied_${notification.id}`;
+                            localStorage.setItem(copiedKey, "true");
+
+                            // Clear the 10-second timer
+                            if (currentHideTimeout) {
+                              clearTimeout(currentHideTimeout);
+                              currentHideTimeout = null;
+                            }
+
+                            // Close after 2 seconds
+                            setTimeout(() => {
+                              notifElement.classList.add("proofpulse-exit");
+                              setTimeout(() => {
+                                if (notifElement.parentNode) {
+                                  notifElement.parentNode.removeChild(notifElement);
+                                }
+                                isShowing = false;
+                              }, 400);
+                            }, 2000);
+                          })
+                          .catch((err) => {
+                            console.error("[ProofPulse] Copy failed:", err);
+                          });
                       }
                     });
                   }
                 }, 600);
               }
             };
-            
+
             // Mouse events
-            canvas.addEventListener('mousedown', (e) => {
+            canvas.addEventListener("mousedown", (e) => {
               isScratching = true;
               scratch(e.clientX, e.clientY);
-              // Pause auto-hide while scratching
-              notifElement.dispatchEvent(new Event('mouseenter'));
+              // Pause the notification timer when user starts scratching
+              notifElement.dispatchEvent(new Event("mouseenter"));
             });
-            
-            canvas.addEventListener('mousemove', (e) => {
+
+            canvas.addEventListener("mousemove", (e) => {
               if (isScratching) {
                 scratch(e.clientX, e.clientY);
                 if (Math.random() > 0.7) checkScratched();
               }
             });
-            
-            canvas.addEventListener('mouseup', () => {
+
+            canvas.addEventListener("mouseup", () => {
               isScratching = false;
               checkScratched();
-              // Resume auto-hide after scratching
-              setTimeout(() => {
-                notifElement.dispatchEvent(new Event('mouseleave'));
-              }, 100);
             });
-            
-            canvas.addEventListener('mouseleave', () => {
+
+            canvas.addEventListener("mouseleave", () => {
               if (isScratching) {
                 isScratching = false;
                 checkScratched();
               }
             });
-            
+
             // Touch events
-            canvas.addEventListener('touchstart', (e) => {
+            canvas.addEventListener("touchstart", (e) => {
               e.preventDefault();
               isScratching = true;
               const touch = e.touches[0];
               scratch(touch.clientX, touch.clientY);
             });
-            
-            canvas.addEventListener('touchmove', (e) => {
+
+            canvas.addEventListener("touchmove", (e) => {
               e.preventDefault();
               if (isScratching) {
                 const touch = e.touches[0];
@@ -1421,41 +1876,64 @@
                 if (Math.random() > 0.7) checkScratched();
               }
             });
-            
-            canvas.addEventListener('touchend', () => {
+
+            canvas.addEventListener("touchend", () => {
               isScratching = false;
               checkScratched();
             });
-            
-            console.log('[ProofPulse] Scratch card initialized');
+
+            console.log("[ProofPulse] Scratch card initialized");
           }, 100); // Small delay to ensure DOM is ready
         } else {
           // Already scratched - setup copy button
-          const copyBtn = notifElement.querySelector('.proofpulse-copy-code');
+          const copyBtn = notifElement.querySelector(".proofpulse-copy-code");
           if (copyBtn) {
-            copyBtn.addEventListener('click', (e) => {
+            copyBtn.addEventListener("click", (e) => {
               e.stopPropagation();
               const code = notification.reward_code;
               if (code && navigator.clipboard) {
-                navigator.clipboard.writeText(code).then(() => {
-                  copyBtn.textContent = '✅ Copied!';
-                  setTimeout(() => {
-                    copyBtn.textContent = '📋 Copy Code';
-                  }, 2000);
-                  trackEvent('code_copied', notification.id);
-                  
-                  // Mark as copied for "show one more time" logic
-                  const copiedKey = `proofpulse_copied_${notification.id}`;
-                  localStorage.setItem(copiedKey, 'true');
-                }).catch(err => {
-                  console.error('[ProofPulse] Copy failed:', err);
-                });
+                navigator.clipboard
+                  .writeText(code)
+                  .then(() => {
+                    copyBtn.textContent = "✅ Copied!";
+                    setTimeout(() => {
+                      copyBtn.textContent = "📋 Copy Code";
+                    }, 2000);
+                    trackEvent("code_copied", notification.id);
+
+                    // Mark as copied for "show one more time" logic
+                    const copiedKey = `proofpulse_copied_${notification.id}`;
+                    localStorage.setItem(copiedKey, "true");
+
+                    // Clear any existing timer
+                    if (currentHideTimeout) {
+                      clearTimeout(currentHideTimeout);
+                      currentHideTimeout = null;
+                    }
+
+                    // Close after 2 seconds
+                    setTimeout(() => {
+                      notifElement.classList.add("proofpulse-exit");
+                      setTimeout(() => {
+                        if (notifElement.parentNode) {
+                          notifElement.parentNode.removeChild(notifElement);
+                        }
+                        isShowing = false;
+                      }, 400);
+                    }, 2000);
+                  })
+                  .catch((err) => {
+                    console.error("[ProofPulse] Copy failed:", err);
+                  });
               }
             });
           }
         }
       } catch (scratchError) {
-        console.error('[ProofPulse] Scratch card initialization error:', scratchError);
+        console.error(
+          "[ProofPulse] Scratch card initialization error:",
+          scratchError
+        );
         // Continue without scratch functionality - non-breaking
       }
     }
@@ -1477,6 +1955,8 @@
       }, Math.max(0, delay));
     };
 
+    // Schedule auto-hide for all notifications (respects custom duration settings)
+    // Scratch cards will pause timer on scratch and restart with 10s after reveal
     scheduleHide(remainingDuration);
 
     // Pause on hover/focus
@@ -1502,36 +1982,167 @@
     notifElement.addEventListener("focusout", resume);
   }
 
+  // Find next notification to show for a specific trigger type (rotation)
+  function findNextNotificationForTrigger(triggerType) {
+    if (!widgetData || !widgetData.notifications) return null;
+    
+    // Get all notifications that have this trigger type
+    const notificationsWithTrigger = widgetData.notifications.filter(notif => {
+      if (!notif.behavior_triggers || !notif.behavior_triggers.enabled) return false;
+      const triggers = notif.behavior_triggers.triggers || [];
+      return triggers.some(t => t.type === triggerType && t.enabled);
+    });
+    
+    if (notificationsWithTrigger.length === 0) return null;
+    
+    // Initialize tracking for this trigger if not exists
+    if (!shownNotificationsByTrigger[triggerType]) {
+      shownNotificationsByTrigger[triggerType] = [];
+    }
+    
+    // SMART LOGIC: If only 1 notification, check if already shown
+    if (notificationsWithTrigger.length === 1) {
+      const singleNotif = notificationsWithTrigger[0];
+      
+      // Check if already shown
+      if (shownNotificationsByTrigger[triggerType].includes(singleNotif.id)) {
+        console.log(`[ProofPulse] Single notification already shown for ${triggerType}, not showing again`);
+        return null; // Don't show again (acts like "show once")
+      }
+      
+      // Mark as shown and return
+      shownNotificationsByTrigger[triggerType].push(singleNotif.id);
+      console.log(`[ProofPulse] Showing single notification for ${triggerType}`);
+      return singleNotif;
+    }
+    
+    // MULTIPLE NOTIFICATIONS: Use rotation system
+    // Find notifications that haven't been shown yet for this trigger
+    const unshownNotifications = notificationsWithTrigger.filter(
+      notif => !shownNotificationsByTrigger[triggerType].includes(notif.id)
+    );
+    
+    let nextNotification;
+    
+    if (unshownNotifications.length > 0) {
+      // Show next unshown notification
+      nextNotification = unshownNotifications[0];
+    } else {
+      // All shown, reset and start over (rotation)
+      shownNotificationsByTrigger[triggerType] = [];
+      nextNotification = notificationsWithTrigger[0];
+    }
+    
+    // Mark as shown
+    shownNotificationsByTrigger[triggerType].push(nextNotification.id);
+    
+    console.log(`[ProofPulse] Rotating ${triggerType}: showing notification ${nextNotification.id} (${shownNotificationsByTrigger[triggerType].length}/${notificationsWithTrigger.length})`);
+    
+    return nextNotification;
+  }
+
+  // Initialize behavior triggers for notifications (don't show immediately)
+  function initializeBehaviorTriggers(notification) {
+    if (!notification.behavior_triggers || !notification.behavior_triggers.enabled) {
+      return false; // No triggers, will show normally
+    }
+    
+    const triggers = notification.behavior_triggers.triggers || [];
+    
+    if (triggers.length === 0) {
+      return false; // No triggers, will show normally
+    }
+    
+    console.log(`[ProofPulse] Initializing ${triggers.length} behavior trigger(s) for notification ${notification.id}`);
+    
+    // Initialize each trigger
+    triggers.forEach(trigger => {
+      if (!trigger.enabled) return;
+      
+      const callback = () => {
+        // Find next notification to show for this trigger type (rotation)
+        const nextNotification = findNextNotificationForTrigger(trigger.type);
+        
+        if (nextNotification && !isShowing) {
+          // CRITICAL: Check notification-level URL targeting before showing
+          if (nextNotification.target_url_patterns) {
+            const currentPath = window.location.pathname;
+            const urlMatches = matchUrlPatterns(currentPath, nextNotification.target_url_patterns);
+            
+            if (!urlMatches) {
+              console.log(`[ProofPulse] Trigger ${trigger.type} fired but notification blocked by URL targeting (path: ${currentPath})`);
+              return; // Don't show on this page
+            }
+          }
+          
+          console.log(`[ProofPulse] Trigger ${trigger.type} fired, showing rotated notification:`, nextNotification.id);
+          showNotification(nextNotification, widgetData.widget);
+        }
+      };
+      
+      switch (trigger.type) {
+        case 'exit_intent':
+          behaviorTriggers.exitIntent.init(callback, trigger.settings);
+          break;
+        case 'scroll_depth':
+          behaviorTriggers.scrollDepth.init(callback, trigger.settings);
+          break;
+        case 'time_on_page':
+          behaviorTriggers.timeOnPage.init(callback, trigger.settings);
+          break;
+        case 'inactivity':
+          behaviorTriggers.inactivity.init(callback, trigger.settings);
+          break;
+        case 'element_visible':
+          behaviorTriggers.elementVisible.init(callback, trigger.settings);
+          break;
+        default:
+          console.warn(`[ProofPulse] Unknown trigger type: ${trigger.type}`);
+      }
+    });
+    
+    return true; // Triggers initialized, don't show in normal loop
+  }
+
   // Notification loop
   function startNotificationLoop() {
-    console.log('[ProofPulse] startNotificationLoop called');
-    
+    console.log("[ProofPulse] startNotificationLoop called");
+
     if (
       !widgetData ||
       !widgetData.notifications ||
       widgetData.notifications.length === 0
     ) {
-      console.warn('[ProofPulse] Cannot start loop - no widget data or notifications');
+      console.warn(
+        "[ProofPulse] Cannot start loop - no widget data or notifications"
+      );
       return;
     }
 
     // Reset state when starting loop
     isShowing = false;
-    console.log(`[ProofPulse] Starting loop with ${widgetData.notifications.length} notifications, START_DELAY: ${CONFIG.START_DELAY}ms, isShowing reset to: ${isShowing}`);
+    console.log(
+      `[ProofPulse] Starting loop with ${widgetData.notifications.length} notifications, START_DELAY: ${CONFIG.START_DELAY}ms, isShowing reset to: ${isShowing}`
+    );
 
     const showNext = () => {
-      console.log('[ProofPulse] showNext called, isShowing:', isShowing);
-      
+      console.log("[ProofPulse] showNext called, isShowing:", isShowing);
+
       if (!isShowing) {
         if (!frequencyAvailable()) {
-          console.log('[ProofPulse] Frequency not available, waiting...');
+          console.log("[ProofPulse] Frequency not available, waiting...");
           if (!CONFIG.LOOP) return;
           if (nextShowTimeout) clearTimeout(nextShowTimeout);
-          nextShowTimeout = setTimeout(showNext, Math.max(CONFIG.COOLDOWN_MS, CONFIG.NOTIFICATION_GAP));
+          nextShowTimeout = setTimeout(
+            showNext,
+            Math.max(CONFIG.COOLDOWN_MS, CONFIG.NOTIFICATION_GAP)
+          );
           return;
         }
-        
-        console.log('[ProofPulse] Frequency available, preparing to show notification');
+
+        console.log(
+          "[ProofPulse] Frequency available, preparing to show notification"
+        );
         // Skip dismissed notifications if applicable
         let attempts = 0;
         while (
@@ -1548,23 +2159,62 @@
           }
         }
 
-        if (!(CONFIG.DISMISS_TTL != null && attempts >= widgetData.notifications.length)) {
+        if (
+          !(
+            CONFIG.DISMISS_TTL != null &&
+            attempts >= widgetData.notifications.length
+          )
+        ) {
           if (!completedOneCycle) {
-            const notification = widgetData.notifications[currentNotificationIndex];
-            console.log('[ProofPulse] Showing notification:', currentNotificationIndex, notification?.type);
-            showNotification(notification, widgetData.widget);
+            const notification =
+              widgetData.notifications[currentNotificationIndex];
+            console.log(
+              "[ProofPulse] Preparing notification:",
+              currentNotificationIndex,
+              notification?.type
+            );
+            
+            // Check if notification has behavior triggers
+            const hasTriggers = notification.behavior_triggers && 
+                                notification.behavior_triggers.enabled &&
+                                notification.behavior_triggers.triggers &&
+                                notification.behavior_triggers.triggers.length > 0;
+            
+            if (hasTriggers) {
+              // Don't show in normal loop, triggers will handle it
+              console.log("[ProofPulse] Notification has behavior triggers, skipping to next");
+              // Move to next notification and try again immediately (without waiting)
+              currentNotificationIndex =
+                (currentNotificationIndex + 1) % widgetData.notifications.length;
+              if (!CONFIG.LOOP && currentNotificationIndex === 0) {
+                completedOneCycle = true;
+              }
+              // Check next notification immediately
+              setTimeout(showNext, 0);
+              return; // Exit this iteration, don't increment index again below
+            } else {
+              // No triggers, show normally
+              if (!isShowing) {
+                console.log(
+                  "[ProofPulse] Showing notification:",
+                  currentNotificationIndex,
+                  notification?.type
+                );
+                showNotification(notification, widgetData.widget);
+              }
+              // Increment index for next cycle (normal flow)
+              const prevIndex = currentNotificationIndex;
+              currentNotificationIndex =
+                (currentNotificationIndex + 1) % widgetData.notifications.length;
+              if (!CONFIG.LOOP && currentNotificationIndex === 0) {
+                completedOneCycle = true;
+              }
+            }
           } else {
-            console.log('[ProofPulse] Completed one cycle, not showing');
+            console.log("[ProofPulse] Completed one cycle, not showing");
           }
         } else {
-          console.log('[ProofPulse] All notifications dismissed');
-        }
-
-        const prevIndex = currentNotificationIndex;
-        currentNotificationIndex =
-          (currentNotificationIndex + 1) % widgetData.notifications.length;
-        if (!CONFIG.LOOP && currentNotificationIndex === 0) {
-          completedOneCycle = true;
+          console.log("[ProofPulse] All notifications dismissed");
         }
       }
 
@@ -1603,20 +2253,32 @@
       // Check device targeting (non-breaking - only if configured)
       const currentDevice = getDeviceType();
       console.log(`[ProofPulse] Device detected: ${currentDevice}`);
-      
+
       if (widgetData.widget.device_targeting) {
         const targetDevices = widgetData.widget.device_targeting;
         console.log(`[ProofPulse] Device targeting configured:`, targetDevices);
-        
+
         // If device_targeting is set and current device is not in the list, don't show widget
-        if (Array.isArray(targetDevices) && targetDevices.length > 0 && !targetDevices.includes(currentDevice)) {
-          console.log(`[ProofPulse] ❌ Widget hidden - device targeting (current: ${currentDevice}, targets: ${targetDevices.join(', ')})`);
+        if (
+          Array.isArray(targetDevices) &&
+          targetDevices.length > 0 &&
+          !targetDevices.includes(currentDevice)
+        ) {
+          console.log(
+            `[ProofPulse] ❌ Widget hidden - device targeting (current: ${currentDevice}, targets: ${targetDevices.join(
+              ", "
+            )})`
+          );
           return;
         } else {
-          console.log(`[ProofPulse] ✅ Widget shown - device matches targeting`);
+          console.log(
+            `[ProofPulse] ✅ Widget shown - device matches targeting`
+          );
         }
       } else {
-        console.log(`[ProofPulse] ✅ Widget shown - no device targeting configured (show on all devices)`);
+        console.log(
+          `[ProofPulse] ✅ Widget shown - no device targeting configured (show on all devices)`
+        );
       }
 
       // Check URL targeting (non-breaking - only if configured)
@@ -1626,99 +2288,139 @@
           const urlPatterns = widgetData.widget.url_targeting;
           console.log(`[ProofPulse] URL targeting configured:`, urlPatterns);
           console.log(`[ProofPulse] Current path:`, currentPath);
-          
+
           const urlMatches = matchUrlPatterns(currentPath, urlPatterns);
           if (!urlMatches) {
-            console.log(`[ProofPulse] ❌ Widget hidden - URL targeting (path: ${currentPath})`);
+            console.log(
+              `[ProofPulse] ❌ Widget hidden - URL targeting (path: ${currentPath})`
+            );
             return;
           } else {
             console.log(`[ProofPulse] ✅ Widget shown - URL matches targeting`);
           }
         } else {
-          console.log(`[ProofPulse] ✅ Widget shown - no URL targeting configured (show on all pages)`);
+          console.log(
+            `[ProofPulse] ✅ Widget shown - no URL targeting configured (show on all pages)`
+          );
         }
       } catch (urlError) {
         // On error, show widget (non-breaking)
-        console.error('[ProofPulse] URL targeting error:', urlError);
-        console.log(`[ProofPulse] ✅ Widget shown - URL targeting error (defaulting to show)`);
+        console.error("[ProofPulse] URL targeting error:", urlError);
+        console.log(
+          `[ProofPulse] ✅ Widget shown - URL targeting error (defaulting to show)`
+        );
       }
 
       // Check time-based rules (non-breaking - only if configured)
       try {
-        if (widgetData.widget.time_rules && widgetData.widget.time_rules.enabled) {
+        if (
+          widgetData.widget.time_rules &&
+          widgetData.widget.time_rules.enabled
+        ) {
           const rules = widgetData.widget.time_rules;
           const now = new Date();
-          
+
           if (CONFIG.DEBUG) {
             console.log(`[ProofPulse] Time rules configured:`, rules);
             console.log(`[ProofPulse] Current time:`, now.toISOString());
           }
-          
+
           // Check day of week (0 = Sunday, 6 = Saturday)
-          if (rules.days && Array.isArray(rules.days) && rules.days.length > 0) {
+          if (
+            rules.days &&
+            Array.isArray(rules.days) &&
+            rules.days.length > 0
+          ) {
             const currentDay = now.getDay();
             if (!rules.days.includes(currentDay)) {
-              console.log(`[ProofPulse] ❌ Widget hidden - Not in allowed days (current: ${currentDay}, allowed: ${rules.days.join(',')})`);
+              console.log(
+                `[ProofPulse] ❌ Widget hidden - Not in allowed days (current: ${currentDay}, allowed: ${rules.days.join(
+                  ","
+                )})`
+              );
               return;
             }
             if (CONFIG.DEBUG) {
-              console.log(`[ProofPulse] ✅ Day check passed (current: ${currentDay})`);
+              console.log(
+                `[ProofPulse] ✅ Day check passed (current: ${currentDay})`
+              );
             }
           }
-          
+
           // Check active hours
-          if (rules.active_hours && rules.active_hours.start !== undefined && rules.active_hours.end !== undefined) {
+          if (
+            rules.active_hours &&
+            rules.active_hours.start !== undefined &&
+            rules.active_hours.end !== undefined
+          ) {
             const currentHour = now.getHours();
             const startHour = rules.active_hours.start;
             const endHour = rules.active_hours.end;
-            
+
             if (currentHour < startHour || currentHour >= endHour) {
-              console.log(`[ProofPulse] ❌ Widget hidden - Outside active hours (current: ${currentHour}, allowed: ${startHour}-${endHour})`);
+              console.log(
+                `[ProofPulse] ❌ Widget hidden - Outside active hours (current: ${currentHour}, allowed: ${startHour}-${endHour})`
+              );
               return;
             }
             if (CONFIG.DEBUG) {
-              console.log(`[ProofPulse] ✅ Hour check passed (current: ${currentHour}, allowed: ${startHour}-${endHour})`);
+              console.log(
+                `[ProofPulse] ✅ Hour check passed (current: ${currentHour}, allowed: ${startHour}-${endHour})`
+              );
             }
           }
-          
+
           console.log(`[ProofPulse] ✅ Widget shown - Time rules passed`);
         } else {
           if (CONFIG.DEBUG) {
-            console.log(`[ProofPulse] ✅ Widget shown - no time rules configured (show at all times)`);
+            console.log(
+              `[ProofPulse] ✅ Widget shown - no time rules configured (show at all times)`
+            );
           }
         }
       } catch (timeError) {
         // On error, show widget (non-breaking)
-        console.error('[ProofPulse] Time rules error:', timeError);
-        console.log(`[ProofPulse] ✅ Widget shown - Time rules error (defaulting to show)`);
+        console.error("[ProofPulse] Time rules error:", timeError);
+        console.log(
+          `[ProofPulse] ✅ Widget shown - Time rules error (defaulting to show)`
+        );
       }
 
       // Apply widget-specific timing settings from database
-      if (widgetData.widget.duration) CONFIG.NOTIFICATION_DURATION = widgetData.widget.duration * 1000;
-      if (widgetData.widget.gap !== undefined) CONFIG.NOTIFICATION_GAP = widgetData.widget.gap * 1000;
-      if (widgetData.widget.start_delay !== undefined) CONFIG.START_DELAY = widgetData.widget.start_delay * 1000;
-      if (widgetData.widget.loop !== undefined) CONFIG.LOOP = widgetData.widget.loop;
-      if (widgetData.widget.shuffle !== undefined) CONFIG.SHUFFLE = widgetData.widget.shuffle;
-      
+      if (widgetData.widget.duration)
+        CONFIG.NOTIFICATION_DURATION = widgetData.widget.duration * 1000;
+      if (widgetData.widget.gap !== undefined)
+        CONFIG.NOTIFICATION_GAP = widgetData.widget.gap * 1000;
+      if (widgetData.widget.start_delay !== undefined)
+        CONFIG.START_DELAY = widgetData.widget.start_delay * 1000;
+      if (widgetData.widget.loop !== undefined)
+        CONFIG.LOOP = widgetData.widget.loop;
+      if (widgetData.widget.shuffle !== undefined)
+        CONFIG.SHUFFLE = widgetData.widget.shuffle;
+
       // Apply widget-specific style settings
-      if (widgetData.widget.radius !== undefined) CONFIG.RADIUS = widgetData.widget.radius;
+      if (widgetData.widget.radius !== undefined)
+        CONFIG.RADIUS = widgetData.widget.radius;
       if (widgetData.widget.shadow) CONFIG.SHADOW = widgetData.widget.shadow;
       if (widgetData.widget.anim) CONFIG.ANIM = widgetData.widget.anim;
-      
+
       // Apply script attribute overrides to widget settings (non-breaking)
       if (ds.color) widgetData.widget.primary_color = ds.color;
       if (ds.position) widgetData.widget.position = ds.position;
 
       applyThemePreset();
-      
+
       console.log("[ProofPulse] Applied settings:", {
-        duration: CONFIG.NOTIFICATION_DURATION / 1000 + 's',
-        gap: CONFIG.NOTIFICATION_GAP / 1000 + 's',
-        start_delay: CONFIG.START_DELAY / 1000 + 's',
+        duration: CONFIG.NOTIFICATION_DURATION / 1000 + "s",
+        gap: CONFIG.NOTIFICATION_GAP / 1000 + "s",
+        start_delay: CONFIG.START_DELAY / 1000 + "s",
         loop: CONFIG.LOOP,
         shuffle: CONFIG.SHUFFLE,
-        bg_color: widgetData.widget.bg_color || '#FFFFFF',
-        bg_opacity: widgetData.widget.bg_opacity !== undefined ? widgetData.widget.bg_opacity : 100,
+        bg_color: widgetData.widget.bg_color || "#FFFFFF",
+        bg_opacity:
+          widgetData.widget.bg_opacity !== undefined
+            ? widgetData.widget.bg_opacity
+            : 100,
       });
 
       if (!(matchesPath() && matchesDevice() && matchesUtm())) {
@@ -1726,7 +2428,11 @@
       }
 
       // Optionally shuffle order per pageview
-      if (CONFIG.SHUFFLE && widgetData.notifications && widgetData.notifications.length > 1) {
+      if (
+        CONFIG.SHUFFLE &&
+        widgetData.notifications &&
+        widgetData.notifications.length > 1
+      ) {
         for (let i = widgetData.notifications.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [widgetData.notifications[i], widgetData.notifications[j]] = [
@@ -1736,63 +2442,87 @@
         }
       }
 
+      // Initialize behavior triggers for all notifications
+      console.log("[ProofPulse] Initializing behavior triggers...");
+      widgetData.notifications.forEach((notification, index) => {
+        const initialized = initializeBehaviorTriggers(notification);
+        if (initialized) {
+          console.log(`[ProofPulse] Behavior triggers initialized for notification ${index + 1}/${widgetData.notifications.length}`);
+        }
+      });
+
       // Start showing notifications
       startNotificationLoop();
 
       // Monitor URL changes for SPA navigation (Next.js, React Router, etc.)
       let lastPath = window.location.pathname;
-      
+
       const checkUrlAndToggleWidget = () => {
         const currentPath = window.location.pathname;
-        
+
         if (currentPath !== lastPath) {
           lastPath = currentPath;
           console.log(`[ProofPulse] URL changed to: ${currentPath}`);
-          
+
           // Check if widget should be visible on new URL
           if (widgetData.widget.url_targeting) {
-            const urlMatches = matchUrlPatterns(currentPath, widgetData.widget.url_targeting);
-            
+            const urlMatches = matchUrlPatterns(
+              currentPath,
+              widgetData.widget.url_targeting
+            );
+
             if (!urlMatches) {
-              console.log(`[ProofPulse] ❌ Hiding widget - URL doesn't match targeting`);
+              console.log(
+                `[ProofPulse] ❌ Hiding widget - URL doesn't match targeting`
+              );
               // Hide widget
               if (notificationContainer) {
-                notificationContainer.style.display = 'none';
+                notificationContainer.style.display = "none";
               }
               // Clear any active notifications
               if (nextShowTimeout) {
                 clearTimeout(nextShowTimeout);
                 nextShowTimeout = null;
               }
-              const active = notificationContainer?.querySelector(".proofpulse-notification");
+              const active = notificationContainer?.querySelector(
+                ".proofpulse-notification"
+              );
               if (active) active.remove();
             } else {
-              console.log(`[ProofPulse] ✅ Showing widget - URL matches targeting`);
+              console.log(
+                `[ProofPulse] ✅ Showing widget - URL matches targeting`
+              );
               // Show widget
               if (notificationContainer) {
-                notificationContainer.style.display = 'block';
+                notificationContainer.style.display = "block";
                 console.log(`[ProofPulse] Container display set to: block`);
               } else {
                 console.warn(`[ProofPulse] ⚠️ Container not found!`);
               }
-              
+
               // Clear any existing notifications
-              const active = notificationContainer?.querySelector(".proofpulse-notification");
+              const active = notificationContainer?.querySelector(
+                ".proofpulse-notification"
+              );
               if (active) {
                 active.remove();
                 console.log(`[ProofPulse] Removed existing notification`);
               }
-              
+
               // Always restart notification loop when showing
               if (nextShowTimeout) {
                 clearTimeout(nextShowTimeout);
                 nextShowTimeout = null;
                 console.log(`[ProofPulse] Cleared existing timeout`);
               }
-              
+
               console.log(`[ProofPulse] 🔄 Restarting notification loop...`);
-              console.log(`[ProofPulse] Available notifications: ${widgetData?.notifications?.length || 0}`);
-              
+              console.log(
+                `[ProofPulse] Available notifications: ${
+                  widgetData?.notifications?.length || 0
+                }`
+              );
+
               if (widgetData?.notifications?.length > 0) {
                 startNotificationLoop();
               } else {
@@ -1802,35 +2532,37 @@
           }
         }
       };
-      
+
       // Listen for URL changes (works with pushState/replaceState)
       const originalPushState = history.pushState;
       const originalReplaceState = history.replaceState;
-      
-      history.pushState = function() {
+
+      history.pushState = function () {
         originalPushState.apply(this, arguments);
         checkUrlAndToggleWidget();
       };
-      
-      history.replaceState = function() {
+
+      history.replaceState = function () {
         originalReplaceState.apply(this, arguments);
         checkUrlAndToggleWidget();
       };
-      
+
       // Also listen for popstate (back/forward buttons)
-      window.addEventListener('popstate', checkUrlAndToggleWidget);
-      
+      window.addEventListener("popstate", checkUrlAndToggleWidget);
+
       // Also check periodically as a fallback (for frameworks that don't use history API)
       setInterval(checkUrlAndToggleWidget, 1000);
 
       // Pause when page is hidden, resume when visible
       document.addEventListener("visibilitychange", () => {
         if (!notificationContainer) return;
-        
+
         if (document.hidden) {
           // Pause: Clear timers when tab becomes hidden
-          console.log('[ProofPulse] Tab hidden - pausing notifications');
-          const active = notificationContainer.querySelector(".proofpulse-notification");
+          console.log("[ProofPulse] Tab hidden - pausing notifications");
+          const active = notificationContainer.querySelector(
+            ".proofpulse-notification"
+          );
           if (active) active.dispatchEvent(new Event("mouseenter"));
           if (nextShowTimeout) {
             clearTimeout(nextShowTimeout);
@@ -1838,31 +2570,40 @@
           }
         } else {
           // Resume: Restart notification loop when tab becomes visible
-          console.log('[ProofPulse] Tab visible - resuming notifications');
-          
+          console.log("[ProofPulse] Tab visible - resuming notifications");
+
           // Check if we should show widget on current URL
           if (widgetData?.widget?.url_targeting) {
             const currentPath = window.location.pathname;
-            const urlMatches = matchUrlPatterns(currentPath, widgetData.widget.url_targeting);
-            
+            const urlMatches = matchUrlPatterns(
+              currentPath,
+              widgetData.widget.url_targeting
+            );
+
             if (!urlMatches) {
-              console.log('[ProofPulse] Not resuming - URL does not match targeting');
+              console.log(
+                "[ProofPulse] Not resuming - URL does not match targeting"
+              );
               return;
             }
           }
-          
+
           // Clear any existing notification
-          const active = notificationContainer.querySelector(".proofpulse-notification");
+          const active = notificationContainer.querySelector(
+            ".proofpulse-notification"
+          );
           if (active) active.remove();
-          
+
           // Restart the notification loop
           if (nextShowTimeout) {
             clearTimeout(nextShowTimeout);
             nextShowTimeout = null;
           }
-          
+
           if (widgetData?.notifications?.length > 0) {
-            console.log('[ProofPulse] Restarting notification loop after tab became visible');
+            console.log(
+              "[ProofPulse] Restarting notification loop after tab became visible"
+            );
             startNotificationLoop();
           }
         }

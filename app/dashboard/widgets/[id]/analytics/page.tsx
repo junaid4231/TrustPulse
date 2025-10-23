@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Eye,
   MousePointerClick,
+  RefreshCw,
 } from "lucide-react";
 
 // Types from DB
@@ -49,6 +50,7 @@ export default function AnalyticsPage() {
   const [rows, setRows] = useState<AnalyticsRow[]>([]);
   const [notifs, setNotifs] = useState<Record<string, NotificationRow>>({});
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fromISO = useMemo(() => {
     const days = RANGES.find((r) => r.key === rangeKey)!.days;
@@ -99,6 +101,9 @@ export default function AnalyticsPage() {
       } else {
         setNotifs({});
       }
+      
+      // Update last updated timestamp
+      setLastUpdated(new Date());
     } catch (e: any) {
       setError(e.message || "Failed to load analytics");
     } finally {
@@ -108,6 +113,14 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     load();
+    
+    // Auto-refresh every 30 seconds for real-time updates
+    const interval = setInterval(() => {
+      console.log('[Analytics] Auto-refreshing data...');
+      load();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widgetId, fromISO]);
 
@@ -206,8 +219,22 @@ export default function AnalyticsPage() {
                 <h1 className="text-4xl font-bold text-white">Analytics Dashboard</h1>
               </div>
               <p className="text-blue-100 text-lg">Track your widget performance and engagement metrics</p>
+              {lastUpdated && (
+                <p className="text-white/70 text-sm mt-2">
+                  🔄 Last updated: {lastUpdated.toLocaleTimeString()} • Auto-refreshes every 30s
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => load()}
+                disabled={loading}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium inline-flex items-center gap-2 transition-all bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data now"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
               {RANGES.map((r) => (
                 <button
                   key={r.key}

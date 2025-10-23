@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Gift,
 } from "lucide-react";
+import BehaviorTriggersEditor from "@/components/BehaviorTriggersEditor";
 
 // 5 Notification Types for Market Differentiation
 const NOTIFICATION_TYPES = [
@@ -159,6 +160,22 @@ export default function NewNotificationPage() {
     rewardClickUrl: "",
   });
 
+  const [behaviorTriggers, setBehaviorTriggers] = useState<{
+    enabled: boolean;
+    trigger_mode: 'any' | 'all';
+    triggers: Array<{
+      type: 'exit_intent' | 'scroll_depth' | 'time_on_page' | 'inactivity' | 'element_visible';
+      enabled: boolean;
+      settings: {
+        sensitivity?: 'low' | 'medium' | 'high';
+        percentage?: number;
+        direction?: 'down' | 'up';
+        seconds?: number;
+        selector?: string;
+      };
+    }>;
+  } | null>(null);
+
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -256,6 +273,9 @@ export default function NewNotificationPage() {
       }
 
       console.log("Creating notification with data:", notificationData);
+
+      // Add behavior triggers if configured
+      notificationData.behavior_triggers = behaviorTriggers;
 
       const { error: insertError } = await supabase
         .from("notifications")
@@ -884,6 +904,25 @@ export default function NewNotificationPage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* BEHAVIOR TRIGGERS SECTION */}
+            <div className="pt-8 border-t border-gray-200">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  🎯 Behavior Triggers
+                  <span className="text-xs font-normal bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                    Optional
+                  </span>
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Control when this notification appears based on user behavior. Show at the perfect moment for maximum impact!
+                </p>
+              </div>
+              <BehaviorTriggersEditor
+                value={behaviorTriggers}
+                onChange={setBehaviorTriggers}
+              />
             </div>
 
             {/* SUBMIT BUTTONS */}

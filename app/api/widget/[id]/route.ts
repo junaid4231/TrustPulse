@@ -314,6 +314,10 @@ export async function GET(
           reward_expiry: notification.reward_expiry || null,
           reward_max_claims: notification.reward_max_claims || null,
           reward_claimed_count: notification.reward_claimed_count || 0,
+          // Behavior triggers (optional)
+          behavior_triggers: notification.behavior_triggers || null,
+          // Targeting (optional) - needed for client-side checks with behavior triggers
+          target_url_patterns: notification.target_url_patterns || null,
         };
       }),
       meta: {
