@@ -51,7 +51,7 @@ export default function TestWidgetPage() {
     
     {/* Widget Script - Only on test pages */}
     <Script
-      src="https://proofpulse.vercel.app/widget/widget.js"
+      src={`${process.env.NEXT_PUBLIC_APP_URL || 'https://proofpulse.vercel.app'}/widget/widget.js`}
       data-widget="e23aa8cb-5b75-4f1b-83e3-1eb7fbe63fad"
       data-color="#F59E0B"
       data-radius="32"
